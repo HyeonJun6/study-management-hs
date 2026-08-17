@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>자기주도학습 현황 관리 시스템</title>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <!-- FullCalendar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- FullCalendar JS -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  <!-- SheetJS (Excel) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --primary-color: #2563eb;
+      --bg-color: #f8fafc;
+    }
+    body {
+      background-color: var(--bg-color);
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+    .navbar-custom {
+      background-color: #0f172a;
+    }
+    .card-custom {
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      background: #ffffff;
+    }
+    
+    /* 달력 시인성 스타일 강화 */
+    .fc-header-toolbar {
+      padding: 10px;
+    }
+    /* 요일 헤더 색상 설정 */
+    .fc-col-header-cell-cushion {
+      color: #1e293b !important; /* 평일 요일 글자: 검정 */
+      font-weight: bold;
+      text-decoration: none !important;
+    }
+    .fc-day-sun .fc-col-header-cell-cushion,
+    .fc-day-sun .fc-daygrid-day-number {
+      color: #dc2626 !important; /* 일요일: 빨강 */
+    }
+    .fc-day-sat .fc-col-header-cell-cushion,
+    .fc-day-sat .fc-daygrid-day-number {
+      color: #2563eb !important; /* 토요일: 파랑 */
+    }
+    .fc-daygrid-day-number {
+      color: #1e293b; /* 평일 날짜: 검정 */
+      font-weight: 600;
+      text-decoration: none !important;
+    }
+    
+    /* 지난달 / 다음달 날짜 음영 처리 */
+    .fc-day-other {
+      background-color: #e2e8f0 !important;
+    }
+    .fc-day-other .fc-daygrid-day-number {
+      color: #94a3b8 !important;
+      font-weight: normal;
+    }
+
+    /* 달력 내부 이벤트 학년별 커스텀 색상 */
+    .fc-event {
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 2px 4px;
+      border-radius: 4px;
+      margin-top: 2px !important;
+      border: none !important;
+    }
+    /* 1학년: 노랑 */
+    .event-g1 {
+      background-color: #f59e0b !important;
+      color: #000000 !important;
+      font-weight: 600;
+    }
+    /* 2학년: 초록 */
+    .event-g2 {
+      background-color: #10b981 !important;
+      color: #ffffff !important;
+      font-weight: 500;
+    }
+    /* 3학년: 파랑 */
+    .event-g3 {
+      background-color: #3b82f6 !important;
+      color: #ffffff !important;
+      font-weight: 500;
+    }
+    /* 특이사항 사유: 빨강 */
+    .event-reason {
+      background-color: #ef4444 !important;
+      color: #ffffff !important;
+    }
+
+    .tab-btn {
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: 8px;
+    }
+    .tab-btn.active {
+      background-color: var(--primary-color) !important;
+      color: white !important;
+    }
+    
+    .weekly-day-box {
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 상단 네비게이션 (관리자, 교사 순) -->
+  <nav class="navbar navbar-dark navbar-custom px-4 py-3 mb-4">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+      <span class="navbar-brand mb-0 h1 fs-4 fw-bold">
+        <i class="fa-solid fa-graduation-cap me-2"></i>자기주도학습 현황 관리
+      </span>
+      <div class="d-flex gap-2">
+        <button id="btnAdminTab" class="btn btn-outline-light tab-btn" onclick="openAdminAuthModal()">
+          <i class="fa-solid fa-user-gear me-1"></i> 관리자
+        </button>
+        <button id="btnTeacherTab" class="btn btn-outline-light tab-btn active" onclick="switchTab('teacher')">
+          <i class="fa-solid fa-chalkboard-user me-1"></i> 교사
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid px-4">
+    
+    <!-- 교사 탭 콘텐츠 -->
+    <div id="teacherView">
+      <div class="row g-4">
+        <!-- 메인 달력 카드 -->
+        <div class="col-lg-7">
+          <div class="card card-custom p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0"><i class="fa-regular fa-calendar-days me-2 text-primary"></i>학습 현황 달력</h5>
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" onclick="goToToday()">
+                  <i class="fa-solid fa-location-crosshairs me-1"></i> 오늘
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="openDataModal()">
+                  <i class="fa-solid fa-plus me-1"></i> 현황 기록하기
+                </button>
+                <button class="btn btn-sm btn-success" onclick="openExportModal()">
+                  <i class="fa-solid fa-file-excel me-1"></i> 엑셀 내보내기
+                </button>
+              </div>
+            </div>
+            <div id="calendar"></div>
+          </div>
+        </div>
+
+        <!-- 하단 그래프 및 대시보드 카드 -->
+        <div class="col-lg-5">
+          <div class="card card-custom p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0"><i class="fa-solid fa-chart-column me-2 text-primary"></i>주간/월간 참여 현황</h5>
+              <small class="text-muted" id="chartSubTitle">최근 등록 데이터</small>
+            </div>
+            <div style="height: 260px;">
+              <canvas id="studyChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card card-custom p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-table me-2 text-primary"></i>일별 집계 요약</h5>
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+              <table class="table table-hover align-middle text-center" id="summaryTable">
+                <thead class="table-light">
+                  <tr>
+                    <th>날짜</th>
+                    <th>1학년(참여/신청)</th>
+                    <th>2학년(참여/신청)</th>
+                    <th>3학년(참여/신청)</th>
+                    <th>합계(참여/신청)</th>
+                  </tr>
+                </thead>
+                <tbody id="summaryTableBody">
+                  <!-- JS Dynamic Content -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 관리자 탭 콘텐츠 -->
+    <div id="adminView" style="display: none;">
+      <div class="alert alert-warning d-flex align-items-center justify-content-between mb-4" role="alert">
+        <div class="d-flex align-items-center">
+          <i class="fa-solid fa-shield-halved fs-4 me-3"></i>
+          <div>
+            <strong>관리자 모드 활성화됨:</strong> 학생 수 수정, 일정 기록(공휴일/모의고사 등) 및 데이터 일괄 삭제 관리가 가능합니다.
+          </div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="openBulkDeleteModal()">
+          <i class="fa-solid fa-trash-can me-1"></i> 데이터 기간별 일괄 삭제
+        </button>
+      </div>
+
+      <div class="row g-4">
+        <!-- 행사/특이사항 사전 등록 -->
+        <div class="col-md-5">
+          <div class="card card-custom p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-calendar-plus me-2 text-danger"></i>특이사항(행사/공휴일) 사전 등록</h5>
+            <form id="adminScheduleForm">
+              <div class="mb-3">
+                <label class="form-label font-weight-bold">일자 지정</label>
+                <input type="date" class="form-control" id="scheduleDate" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">구분/사유 예시</label>
+                <select class="form-select mb-2" onchange="setScheduleReason(this.value)">
+                  <option value="">-- 직접 입력 또는 선택 --</option>
+                  <option value="공휴일">공휴일 (광복절, 추석 등)</option>
+                  <option value="전국연합모의고사">전국연합모의고사</option>
+                  <option value="체험학습">현장체험학습 / 재량휴업일</option>
+                  <option value="정기시험">1학기/2학기 정기시험</option>
+                </select>
+                <input type="text" class="form-control" id="scheduleReason" placeholder="사유를 입력하세요 (예: 광복절, 모의고사)" required>
+              </div>
+              <!-- 명칭 변경: 일정 기록하기 -->
+              <button type="submit" class="btn btn-danger w-100"><i class="fa-solid fa-floppy-disk me-1"></i> 일정 기록하기</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 기존 데이터 자유 관리/수정 -->
+        <div class="col-md-7">
+          <div class="card card-custom p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-pen-to-square me-2 text-warning"></i>등록된 데이터 수정 및 관리</h5>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="table table-bordered text-center align-middle">
+                <thead class="table-dark">
+                  <tr>
+                    <th>날짜</th>
+                    <th>유형</th>
+                    <th>내용/현황 요약</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="adminDataTableBody">
+                  <!-- Dynamic render -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal: 관리자 인증 -->
+  <div class="modal fade" id="adminAuthModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold"><i class="fa-solid fa-lock me-2"></i>관리자 인증</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted mb-2">관리자 번호를 입력해 주세요.</p>
+          <input type="password" id="adminPinInput" class="form-control text-center fs-4" placeholder="••••" maxlength="4">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary w-100" onclick="verifyAdminPin()">확인</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: 현황 입력 -->
+  <div class="modal fade" id="dataInputModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title fw-bold" id="modalTitle"><i class="fa-solid fa-pen-field me-2"></i>자기주도학습 현황 입력</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          
+          <!-- 명칭 변경: 주간 단위 입력 -->
+          <ul class="nav nav-pills nav-fill mb-3" id="inputModeTab">
+            <li class="nav-item">
+              <button class="nav-link active fw-bold" id="daily-tab" data-bs-toggle="tab" data-bs-target="#dailyInputArea" type="button" onclick="setMode('daily')">일일 단위 입력</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link fw-bold" id="weekly-tab" data-bs-toggle="tab" data-bs-target="#weeklyInputArea" type="button" onclick="setMode('weekly')">주간 단위 입력</button>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+            <!-- 1. 일일 입력 영역 -->
+            <div class="tab-pane fade show active" id="dailyInputArea">
+              <form id="studyDataFormDaily">
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold">기록 일자</label>
+                    <input type="date" id="inputDate" class="form-control" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold">특이사항/휴업 사유 (해당 시 입력)</label>
+                    <input type="text" id="inputReason" class="form-control" placeholder="예: 광복절, 모의고사, 체험학습 등">
+                  </div>
+                </div>
+
+                <hr>
+
+                <!-- 1학년 -->
+                <div class="mb-3">
+                  <h6 class="fw-bold text-primary"><i class="fa-solid fa-user-graduate me-1"></i> 1학년</h6>
+                  <div class="row g-2">
+                    <div class="col-6"><input type="number" id="g1_apply" class="form-control" placeholder="신청자 수 (명)" min="0"></div>
+                    <div class="col-6"><input type="number" id="g1_attend" class="form-control" placeholder="참여자 수 (명)" min="0"></div>
+                  </div>
+                </div>
+
+                <!-- 2학년 -->
+                <div class="mb-3">
+                  <h6 class="fw-bold text-primary"><i class="fa-solid fa-user-graduate me-1"></i> 2학년</h6>
+                  <div class="row g-2">
+                    <div class="col-6"><input type="number" id="g2_apply" class="form-control" placeholder="신청자 수 (명)" min="0"></div>
+                    <div class="col-6"><input type="number" id="g2_attend" class="form-control" placeholder="참여자 수 (명)" min="0"></div>
+                  </div>
+                </div>
+
+                <!-- 3학년 -->
+                <div class="mb-3 p-3 bg-light rounded border">
+                  <h6 class="fw-bold text-primary"><i class="fa-solid fa-user-graduate me-1"></i> 3학년 (남/여 별도 기록 및 자동 합산)</h6>
+                  <div class="row g-2 mb-2">
+                    <div class="col-3"><span class="form-control-plaintext text-end fw-bold">남학생:</span></div>
+                    <div class="col-4"><input type="number" id="g3_m_apply" class="form-control form-control-sm" placeholder="남 신청 (명)" oninput="calcG3Total()"></div>
+                    <div class="col-4"><input type="number" id="g3_m_attend" class="form-control form-control-sm" placeholder="남 참여 (명)" oninput="calcG3Total()"></div>
+                  </div>
+                  <div class="row g-2 mb-2">
+                    <div class="col-3"><span class="form-control-plaintext text-end fw-bold">여학생:</span></div>
+                    <div class="col-4"><input type="number" id="g3_f_apply" class="form-control form-control-sm" placeholder="여 신청 (명)" oninput="calcG3Total()"></div>
+                    <div class="col-4"><input type="number" id="g3_f_attend" class="form-control form-control-sm" placeholder="여 참여 (명)" oninput="calcG3Total()"></div>
+                  </div>
+                  <div class="row g-2 pt-2 border-top">
+                    <div class="col-3"><span class="form-control-plaintext text-end fw-bold text-dark">3학년 합계:</span></div>
+                    <div class="col-4"><input type="number" id="g3_apply" class="form-control form-control-sm bg-white" placeholder="총 신청 수" readonly></div>
+                    <div class="col-4"><input type="number" id="g3_attend" class="form-control form-control-sm bg-white" placeholder="총 참여 수" readonly></div>
+                  </div>
+                </div>
+
+                <div class="modal-footer px-0 pb-0">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                  <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-1"></i> 저장하기</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- 2. 주간 단위 입력 영역 -->
+            <div class="tab-pane fade" id="weeklyInputArea">
+              <div class="mb-3 bg-light p-3 rounded border">
+                <label class="form-label fw-bold">주간 시작일(월요일) 선택</label>
+                <input type="date" id="weeklyStartDate" class="form-control" onchange="generateWeeklyForm()">
+              </div>
+              <form id="studyDataFormWeekly">
+                <div id="weeklyFormContainer">
+                  <!-- 요일별 입력 필드 동적 생성 -->
+                </div>
+                <div class="modal-footer px-0 pb-0">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                  <button type="submit" class="btn btn-success"><i class="fa-solid fa-check me-1"></i> 주간 데이터 일괄 저장</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: 관리자 데이터 일괄 삭제 -->
+  <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title fw-bold"><i class="fa-solid fa-trash-can me-2"></i>데이터 기간별 일괄 삭제 (초기화)</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-danger fw-bold mb-2">⚠️ 선택한 기간의 모든 입력 데이터가 일괄 삭제됩니다.</p>
+          <div class="mb-3">
+            <label class="form-label fw-bold">삭제할 기간 선택</label>
+            <div class="input-group">
+              <input type="date" id="deleteStartDate" class="form-control">
+              <span class="input-group-text">~</span>
+              <input type="date" id="deleteEndDate" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-danger" onclick="executeBulkDelete()"><i class="fa-solid fa-trash-can me-1"></i> 일괄 삭제 실행</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: 엑셀 내보내기 -->
+  <div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title fw-bold"><i class="fa-solid fa-file-excel me-2"></i>엑셀 데이터 내보내기</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold">내보낼 기간 선택</label>
+            <div class="input-group">
+              <input type="date" id="exportStartDate" class="form-control">
+              <span class="input-group-text">~</span>
+              <input type="date" id="exportEndDate" class="form-control">
+            </div>
+          </div>
+          <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-sm btn-outline-secondary" onclick="setExportRange('week')">이번 주 설정</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="setExportRange('month')">이번 달 설정</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-success" onclick="exportToExcel()"><i class="fa-solid fa-download me-1"></i> 다운로드</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    const DB_KEY = "SELF_STUDY_DATA_V3";
+    
+    // --- 1. 데이터 마이그레이션(기존 데이터 자동 보존) 로직 ---
+    function loadDataWithMigration() {
+      let currentData = JSON.parse(localStorage.getItem(DB_KEY)) || {};
+      
+      // 이전 버전 키 목록 검사
+      const oldKeys = ["SELF_STUDY_DATA_V1", "SELF_STUDY_DATA_V2"];
+      oldKeys.forEach(oldKey => {
+        const oldData = JSON.parse(localStorage.getItem(oldKey));
+        if (oldData) {
+          // 기존 데이터를 새 데이터 저장소에 병합 (손실 방지)
+          currentData = Object.assign({}, oldData, currentData);
+        }
+      });
+
+      // 병합된 통합 데이터를 현재 키에 최신화 저장
+      localStorage.setItem(DB_KEY, JSON.stringify(currentData));
+      return currentData;
+    }
+
+    let dbData = loadDataWithMigration();
+    let calendar;
+    let chartInstance;
+    let isAdmin = false;
+    let currentInputMode = 'daily';
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initCalendar();
+      initChart();
+      updateAllViews();
+      
+      const todayStr = new Date().toISOString().split('T')[0];
+      document.getElementById('inputDate').value = todayStr;
+      document.getElementById('scheduleDate').value = todayStr;
+      
+      setMondayForWeekly(new Date());
+    });
+
+    // --- FullCalendar 달력 초기화 ---
+    function initCalendar() {
+      const calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'ko',
+        headerToolbar: {
+          left: 'prev,next',
+          center: 'title',
+          right: 'dayGridMonth,listWeek'
+        },
+        selectable: true,
+        dateClick: function(info) {
+          if(isAdmin) {
+            document.getElementById('scheduleDate').value = info.dateStr;
+          }
+          openDataModal(info.dateStr);
+        },
+        events: getCalendarEvents()
+      });
+      calendar.render();
+    }
+
+    // 학년별 색상 반영 달력 이벤트 등록 (1학년: 노랑, 2학년: 초록, 3학년: 파랑)
+    function getCalendarEvents() {
+      const events = [];
+      Object.keys(dbData).forEach(date => {
+        const item = dbData[date];
+        if (item.reason) {
+          events.push({
+            title: `[사유] ${item.reason}`,
+            start: date,
+            classNames: ['event-reason'],
+            allDay: true
+          });
+        } else {
+          if (item.g1 && (item.g1.apply > 0 || item.g1.attend > 0)) {
+            events.push({
+              title: `1학년: ${item.g1.attend}/${item.g1.apply}`,
+              start: date,
+              classNames: ['event-g1'],
+              allDay: true
+            });
+          }
+          if (item.g2 && (item.g2.apply > 0 || item.g2.attend > 0)) {
+            events.push({
+              title: `2학년: ${item.g2.attend}/${item.g2.apply}`,
+              start: date,
+              classNames: ['event-g2'],
+              allDay: true
+            });
+          }
+          if (item.g3 && (item.g3.apply > 0 || item.g3.attend > 0)) {
+            events.push({
+              title: `3학년: ${item.g3.attend}/${item.g3.apply}`,
+              start: date,
+              classNames: ['event-g3'],
+              allDay: true
+            });
+          }
+        }
+      });
+      return events;
+    }
+
+    function goToToday() {
+      if (calendar) calendar.today();
+    }
+
+    // --- 탭 전환 및 관리자 인증 ---
+    function switchTab(tab) {
+      if (tab === 'teacher') {
+        document.getElementById('teacherView').style.display = 'block';
+        document.getElementById('adminView').style.display = 'none';
+        document.getElementById('btnTeacherTab').classList.add('active');
+        document.getElementById('btnAdminTab').classList.remove('active');
+        isAdmin = false;
+        setTimeout(() => calendar.render(), 100);
+      } else if (tab === 'admin') {
+        document.getElementById('teacherView').style.display = 'none';
+        document.getElementById('adminView').style.display = 'block';
+        document.getElementById('btnTeacherTab').classList.remove('active');
+        document.getElementById('btnAdminTab').classList.add('active');
+        isAdmin = true;
+        renderAdminTable();
+      }
+    }
+
+    function openAdminAuthModal() {
+      if (isAdmin) {
+        switchTab('admin');
+        return;
+      }
+      const modal = new bootstrap.Modal(document.getElementById('adminAuthModal'));
+      document.getElementById('adminPinInput').value = '';
+      modal.show();
+    }
+
+    function verifyAdminPin() {
+      const pin = document.getElementById('adminPinInput').value;
+      if (pin === '1954') {
+        bootstrap.Modal.getInstance(document.getElementById('adminAuthModal')).hide();
+        switchTab('admin');
+      } else {
+        alert('관리자 비밀번호가 일치하지 않습니다. (힌트: 1954)');
+      }
+    }
+
+    // --- 현황 입력 모달 및 주간 입력 ---
+    function setMode(mode) {
+      currentInputMode = mode;
+      if (mode === 'weekly') {
+        generateWeeklyForm();
+      }
+    }
+
+    function setMondayForWeekly(d) {
+      const date = new Date(d);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(date.setDate(diff));
+      document.getElementById('weeklyStartDate').value = monday.toISOString().split('T')[0];
+    }
+
+    function openDataModal(dateStr = '') {
+      const modal = new bootstrap.Modal(document.getElementById('dataInputModal'));
+      const targetDate = dateStr || new Date().toISOString().split('T')[0];
+      document.getElementById('inputDate').value = targetDate;
+      setMondayForWeekly(new Date(targetDate));
+
+      if (dbData[targetDate]) {
+        const d = dbData[targetDate];
+        document.getElementById('inputReason').value = d.reason || '';
+        document.getElementById('g1_apply').value = d.g1?.apply || '';
+        document.getElementById('g1_attend').value = d.g1?.attend || '';
+        document.getElementById('g2_apply').value = d.g2?.apply || '';
+        document.getElementById('g2_attend').value = d.g2?.attend || '';
+        document.getElementById('g3_m_apply').value = d.g3?.m_apply || '';
+        document.getElementById('g3_m_attend').value = d.g3?.m_attend || '';
+        document.getElementById('g3_f_apply').value = d.g3?.f_apply || '';
+        document.getElementById('g3_f_attend').value = d.g3?.f_attend || '';
+        calcG3Total();
+      } else {
+        document.getElementById('studyDataFormDaily').reset();
+        document.getElementById('inputDate').value = targetDate;
+      }
+      modal.show();
+    }
+
+    function generateWeeklyForm() {
+      const startStr = document.getElementById('weeklyStartDate').value;
+      if (!startStr) return;
+      const startDate = new Date(startStr);
+      const container = document.getElementById('weeklyFormContainer');
+      container.innerHTML = '';
+
+      const dayNames = ['월요일', '화요일', '수요일', '목요일', '금요일'];
+
+      for (let i = 0; i < 5; i++) {
+        const curr = new Date(startDate);
+        curr.setDate(startDate.getDate() + i);
+        const currStr = curr.toISOString().split('T')[0];
+        const existing = dbData[currStr] || {};
+
+        const dayBox = document.createElement('div');
+        dayBox.className = 'weekly-day-box border';
+        dayBox.innerHTML = `
+          <h6 class="fw-bold text-dark mb-2"><i class="fa-regular fa-calendar-check me-1"></i> ${currStr} (${dayNames[i]})</h6>
+          <div class="row g-2 mb-2">
+            <div class="col-md-12">
+              <input type="text" class="form-control form-control-sm" id="wk_reason_${i}" placeholder="특이사항 사유 (선택)" value="${existing.reason || ''}">
+            </div>
+          </div>
+          <div class="row g-2 text-center align-middle">
+            <div class="col-4">
+              <span class="badge bg-warning text-dark w-100 py-1 mb-1">1학년</span>
+              <input type="number" class="form-control form-control-sm mb-1" id="wk_g1_app_${i}" placeholder="신청" value="${existing.g1?.apply || ''}">
+              <input type="number" class="form-control form-control-sm" id="wk_g1_att_${i}" placeholder="참여" value="${existing.g1?.attend || ''}">
+            </div>
+            <div class="col-4">
+              <span class="badge bg-success w-100 py-1 mb-1">2학년</span>
+              <input type="number" class="form-control form-control-sm mb-1" id="wk_g2_app_${i}" placeholder="신청" value="${existing.g2?.apply || ''}">
+              <input type="number" class="form-control form-control-sm" id="wk_g2_att_${i}" placeholder="참여" value="${existing.g2?.attend || ''}">
+            </div>
+            <div class="col-4">
+              <span class="badge bg-primary w-100 py-1 mb-1">3학년(총합)</span>
+              <input type="number" class="form-control form-control-sm mb-1" id="wk_g3_app_${i}" placeholder="신청" value="${existing.g3?.apply || ''}">
+              <input type="number" class="form-control form-control-sm" id="wk_g3_att_${i}" placeholder="참여" value="${existing.g3?.attend || ''}">
+            </div>
+          </div>
+        `;
+        container.appendChild(dayBox);
+      }
+    }
+
+    function calcG3Total() {
+      const mApp = parseInt(document.getElementById('g3_m_apply').value) || 0;
+      const mAtt = parseInt(document.getElementById('g3_m_attend').value) || 0;
+      const fApp = parseInt(document.getElementById('g3_f_apply').value) || 0;
+      const fAtt = parseInt(document.getElementById('g3_f_attend').value) || 0;
+
+      document.getElementById('g3_apply').value = mApp + fApp;
+      document.getElementById('g3_attend').value = mAtt + fAtt;
+    }
+
+    // 일일 데이터 저장
+    document.getElementById('studyDataFormDaily').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const date = document.getElementById('inputDate').value;
+      const reason = document.getElementById('inputReason').value.trim();
+
+      if (reason) {
+        dbData[date] = { reason: reason };
+      } else {
+        dbData[date] = {
+          reason: '',
+          g1: {
+            apply: parseInt(document.getElementById('g1_apply').value) || 0,
+            attend: parseInt(document.getElementById('g1_attend').value) || 0
+          },
+          g2: {
+            apply: parseInt(document.getElementById('g2_apply').value) || 0,
+            attend: parseInt(document.getElementById('g2_attend').value) || 0
+          },
+          g3: {
+            m_apply: parseInt(document.getElementById('g3_m_apply').value) || 0,
+            m_attend: parseInt(document.getElementById('g3_m_attend').value) || 0,
+            f_apply: parseInt(document.getElementById('g3_f_apply').value) || 0,
+            f_attend: parseInt(document.getElementById('g3_f_attend').value) || 0,
+            apply: parseInt(document.getElementById('g3_apply').value) || 0,
+            attend: parseInt(document.getElementById('g3_attend').value) || 0
+          }
+        };
+      }
+
+      saveAndRefresh();
+      bootstrap.Modal.getInstance(document.getElementById('dataInputModal')).hide();
+    });
+
+    // 주간 데이터 저장
+    document.getElementById('studyDataFormWeekly').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const startStr = document.getElementById('weeklyStartDate').value;
+      const startDate = new Date(startStr);
+
+      for (let i = 0; i < 5; i++) {
+        const curr = new Date(startDate);
+        curr.setDate(startDate.getDate() + i);
+        const currStr = curr.toISOString().split('T')[0];
+
+        const reason = document.getElementById(`wk_reason_${i}`).value.trim();
+        if (reason) {
+          dbData[currStr] = { reason: reason };
+        } else {
+          const g1App = parseInt(document.getElementById(`wk_g1_app_${i}`).value) || 0;
+          const g1Att = parseInt(document.getElementById(`wk_g1_att_${i}`).value) || 0;
+          const g2App = parseInt(document.getElementById(`wk_g2_app_${i}`).value) || 0;
+          const g2Att = parseInt(document.getElementById(`wk_g2_att_${i}`).value) || 0;
+          const g3App = parseInt(document.getElementById(`wk_g3_app_${i}`).value) || 0;
+          const g3Att = parseInt(document.getElementById(`wk_g3_att_${i}`).value) || 0;
+
+          if (g1App || g1Att || g2App || g2Att || g3App || g3Att) {
+            dbData[currStr] = {
+              reason: '',
+              g1: { apply: g1App, attend: g1Att },
+              g2: { apply: g2App, attend: g2Att },
+              g3: { apply: g3App, attend: g3Att }
+            };
+          }
+        }
+      }
+
+      saveAndRefresh();
+      bootstrap.Modal.getInstance(document.getElementById('dataInputModal')).hide();
+      alert("주간 데이터가 일괄 저장되었습니다.");
+    });
+
+    // --- 관리자 기능 ---
+    function setScheduleReason(val) {
+      if(val) document.getElementById('scheduleReason').value = val;
+    }
+
+    document.getElementById('adminScheduleForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const date = document.getElementById('scheduleDate').value;
+      const reason = document.getElementById('scheduleReason').value;
+
+      dbData[date] = { reason: reason };
+      saveAndRefresh();
+      alert(`${date} 일정이 '${reason}'(으)로 등록되었습니다.`);
+    });
+
+    function deleteEntry(date) {
+      if (confirm(`${date} 데이터를 삭제하시겠습니까?`)) {
+        delete dbData[date];
+        saveAndRefresh();
+      }
+    }
+
+    function openBulkDeleteModal() {
+      const modal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
+      const todayStr = new Date().toISOString().split('T')[0];
+      document.getElementById('deleteStartDate').value = todayStr;
+      document.getElementById('deleteEndDate').value = todayStr;
+      modal.show();
+    }
+
+    function executeBulkDelete() {
+      const start = document.getElementById('deleteStartDate').value;
+      const end = document.getElementById('deleteEndDate').value;
+
+      if (!start || !end) {
+        alert('삭제할 기간을 정확히 선택해 주세요.');
+        return;
+      }
+
+      if (start > end) {
+        alert('시작일이 종료일보다 늦을 수 없습니다.');
+        return;
+      }
+
+      if (confirm(`${start} ~ ${end} 기간의 데이터를 정말로 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.`)) {
+        Object.keys(dbData).forEach(date => {
+          if (date >= start && date <= end) {
+            delete dbData[date];
+          }
+        });
+        saveAndRefresh();
+        bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal')).hide();
+        alert('선택한 기간의 데이터가 일괄 삭제(초기화)되었습니다.');
+      }
+    }
+
+    function saveAndRefresh() {
+      localStorage.setItem(DB_KEY, JSON.stringify(dbData));
+      calendar.removeAllEvents();
+      calendar.addEventSource(getCalendarEvents());
+      updateAllViews();
+      if(isAdmin) renderAdminTable();
+    }
+
+    // --- 뷰 & 차트 업데이트 ---
+    function updateAllViews() {
+      renderSummaryTable();
+      renderChart();
+    }
+
+    function renderSummaryTable() {
+      const tbody = document.getElementById('summaryTableBody');
+      tbody.innerHTML = '';
+      const dates = Object.keys(dbData).sort().reverse();
+
+      if(dates.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-muted">등록된 데이터가 없습니다.</td></tr>';
+        return;
+      }
+
+      dates.forEach(date => {
+        const item = dbData[date];
+        const tr = document.createElement('tr');
+        if (item.reason) {
+          tr.innerHTML = `
+            <td><strong>${date}</strong></td>
+            <td colspan="4" class="text-danger fw-bold">[특이사항] ${item.reason}</td>
+          `;
+        } else {
+          const totAtt = (item.g1?.attend||0) + (item.g2?.attend||0) + (item.g3?.attend||0);
+          const totApp = (item.g1?.apply||0) + (item.g2?.apply||0) + (item.g3?.apply||0);
+          tr.innerHTML = `
+            <td>${date}</td>
+            <td>${item.g1?.attend||0} / ${item.g1?.apply||0}</td>
+            <td>${item.g2?.attend||0} / ${item.g2?.apply||0}</td>
+            <td>${item.g3?.attend||0} / ${item.g3?.apply||0}</td>
+            <td class="fw-bold text-primary">${totAtt} / ${totApp}</td>
+          `;
+        }
+        tbody.appendChild(tr);
+      });
+    }
+
+    function initChart() {
+      const ctx = document.getElementById('studyChart').getContext('2d');
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: [],
+          datasets: [
+            { label: '1학년 참여', data: [], backgroundColor: '#f59e0b' }, // 노랑
+            { label: '2학년 참여', data: [], backgroundColor: '#10b981' }, // 초록
+            { label: '3학년 참여', data: [], backgroundColor: '#3b82f6' }  // 파랑
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    function renderChart() {
+      const dates = Object.keys(dbData).sort().slice(-7);
+      const labels = [];
+      const g1Data = [], g2Data = [], g3Data = [];
+
+      dates.forEach(d => {
+        if (!dbData[d].reason) {
+          labels.push(d.slice(5));
+          g1Data.push(dbData[d].g1?.attend || 0);
+          g2Data.push(dbData[d].g2?.attend || 0);
+          g3Data.push(dbData[d].g3?.attend || 0);
+        }
+      });
+
+      chartInstance.data.labels = labels;
+      chartInstance.data.datasets[0].data = g1Data;
+      chartInstance.data.datasets[1].data = g2Data;
+      chartInstance.data.datasets[2].data = g3Data;
+      chartInstance.update();
+    }
+
+    function renderAdminTable() {
+      const tbody = document.getElementById('adminDataTableBody');
+      tbody.innerHTML = '';
+      const dates = Object.keys(dbData).sort().reverse();
+
+      dates.forEach(date => {
+        const item = dbData[date];
+        const tr = document.createElement('tr');
+        const isEvent = !!item.reason;
+        
+        let desc = isEvent ? item.reason : `1학년(${item.g1?.attend}/${item.g1?.apply}), 2학년(${item.g2?.attend}/${item.g2?.apply}), 3학년(${item.g3?.attend}/${item.g3?.apply})`;
+
+        tr.innerHTML = `
+          <td>${date}</td>
+          <td><span class="badge ${isEvent ? 'bg-danger' : 'bg-success'}">${isEvent ? '특이사항' : '자습기록'}</span></td>
+          <td class="text-start">${desc}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="openDataModal('${date}')">수정</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteEntry('${date}')">삭제</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- 엑셀 내보내기 ---
+    function openExportModal() {
+      const modal = new bootstrap.Modal(document.getElementById('exportModal'));
+      setExportRange('week');
+      modal.show();
+    }
+
+    function setExportRange(type) {
+      const end = new Date();
+      const start = new Date();
+      if (type === 'week') {
+        start.setDate(end.getDate() - 7);
+      } else if (type === 'month') {
+        start.setMonth(end.getMonth() - 1);
+      }
+      document.getElementById('exportStartDate').value = start.toISOString().split('T')[0];
+      document.getElementById('exportEndDate').value = end.toISOString().split('T')[0];
+    }
+
+    function exportToExcel() {
+      const start = document.getElementById('exportStartDate').value;
+      const end = document.getElementById('exportEndDate').value;
+
+      if (!start || !end) {
+        alert('기간을 선택해 주세요.');
+        return;
+      }
+
+      const rows = [
+        ["자기주도학습 현황 보고서"],
+        [`조회 기간: ${start} ~ ${end}`],
+        []
+      ];
+
+      rows.push(["날짜", "학년", "신청인원", "참여인원", "특이사항 및 사유"]);
+
+      Object.keys(dbData).sort().forEach(date => {
+        if (date >= start && date <= end) {
+          const d = dbData[date];
+          if (d.reason) {
+            rows.push([date, "전체", "-", "-", d.reason]);
+          } else {
+            rows.push([date, "1학년", d.g1?.apply || 0, d.g1?.attend || 0, "-"]);
+            rows.push([date, "2학년", d.g2?.apply || 0, d.g2?.attend || 0, "-"]);
+            rows.push([date, "3학년(남)", d.g3?.m_apply || 0, d.g3?.m_attend || 0, "-"]);
+            rows.push([date, "3학년(여)", d.g3?.f_apply || 0, d.g3?.f_attend || 0, "-"]);
+            rows.push([date, "3학년(합계)", d.g3?.apply || 0, d.g3?.attend || 0, "-"]);
+          }
+        }
+      });
+
+      const worksheet = XLSX.utils.aoa_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "자습현황보고");
+      XLSX.writeFile(workbook, `자기주도학습현황_${start}_${end}.xlsx`);
+
+      bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+    }
+  </script>
+</body>
+</html>
