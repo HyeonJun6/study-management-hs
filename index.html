@@ -1,1003 +1,1393 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자기주도학습 현황 관리 시스템</title>
-  
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- FontAwesome Icons -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <!-- FullCalendar CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- FullCalendar JS -->
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-  <!-- SheetJS (Excel) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>자기주도학습 통합 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+/* Layout: 넓은 PC 기준 업무 도구 — 상단 고정 헤더 + 탭, 본문 최대 1680px, 표 중심. 칠판 녹색을 기준색으로, 학년색(노랑·초록·파랑)은 기존 앱 규칙 유지 */
+:root{
+  --bg:#f2f4f1; --surface:#ffffff; --surface-2:#eaeee8; --line:#d3dbd2; --line-2:#e3e8e1;
+  --ink:#18221c; --ink-2:#56635b; --ink-3:#86928a;
+  --accent:#1e6a50; --accent-ink:#ffffff; --accent-soft:#dcebe3;
+  --good:#24723a; --good-soft:#dff0e3; --warn:#9a5208; --warn-soft:#fbeed8; --bad:#ad2a2a; --bad-soft:#f9e2df;
+  --g1:#d08700; --g1-soft:#fbefd2; --g2:#1c8556; --g2-soft:#d9efe3; --g3:#2d5fc0; --g3-soft:#dfe7f8;
+  --l1:#7c4a96; --l2:#0d7680; --l3:#46529f;
+  --hol:#fbe7e4; --we:#f6f1e3;
+  --f-sans:"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#111613; --surface:#18201b; --surface-2:#212a24; --line:#2e3a32; --line-2:#26302a;
+  --ink:#e3eae5; --ink-2:#a1aea6; --ink-3:#71807a;
+  --accent:#5cbf96; --accent-ink:#0b1811; --accent-soft:#1b3328;
+  --good:#6cc584; --good-soft:#1b3122; --warn:#e7a54f; --warn-soft:#3a2a12; --bad:#ef7f72; --bad-soft:#3d1d1a;
+  --g1:#f0b43c; --g1-soft:#3a2d10; --g2:#4fc58c; --g2-soft:#173326; --g3:#7fa4f0; --g3-soft:#1c2843;
+  --l1:#c08ad8; --l2:#4fc0c9; --l3:#9aa6ee;
+  --hol:#36201d; --we:#2c2817; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#111613; --surface:#18201b; --surface-2:#212a24; --line:#2e3a32; --line-2:#26302a;
+  --ink:#e3eae5; --ink-2:#a1aea6; --ink-3:#71807a;
+  --accent:#5cbf96; --accent-ink:#0b1811; --accent-soft:#1b3328;
+  --good:#6cc584; --good-soft:#1b3122; --warn:#e7a54f; --warn-soft:#3a2a12; --bad:#ef7f72; --bad-soft:#3d1d1a;
+  --g1:#f0b43c; --g1-soft:#3a2d10; --g2:#4fc58c; --g2-soft:#173326; --g3:#7fa4f0; --g3-soft:#1c2843;
+  --l1:#c08ad8; --l2:#4fc0c9; --l3:#9aa6ee;
+  --hol:#36201d; --we:#2c2817; color-scheme:dark; }
 
-  <style>
-    :root {
-      --primary-color: #2563eb;
-      --bg-color: #f8fafc;
-    }
-    body {
-      background-color: var(--bg-color);
-      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-    }
-    .navbar-custom {
-      background-color: #0f172a;
-    }
-    .card-custom {
-      border: none;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      background: #ffffff;
-    }
-    
-    /* 달력 시인성 스타일 강화 */
-    .fc-header-toolbar {
-      padding: 10px;
-    }
-    /* 요일 헤더 색상 설정 */
-    .fc-col-header-cell-cushion {
-      color: #1e293b !important; /* 평일 요일 글자: 검정 */
-      font-weight: bold;
-      text-decoration: none !important;
-    }
-    .fc-day-sun .fc-col-header-cell-cushion,
-    .fc-day-sun .fc-daygrid-day-number {
-      color: #dc2626 !important; /* 일요일: 빨강 */
-    }
-    .fc-day-sat .fc-col-header-cell-cushion,
-    .fc-day-sat .fc-daygrid-day-number {
-      color: #2563eb !important; /* 토요일: 파랑 */
-    }
-    .fc-daygrid-day-number {
-      color: #1e293b; /* 평일 날짜: 검정 */
-      font-weight: 600;
-      text-decoration: none !important;
-    }
-    
-    /* 지난달 / 다음달 날짜 음영 처리 */
-    .fc-day-other {
-      background-color: #e2e8f0 !important;
-    }
-    .fc-day-other .fc-daygrid-day-number {
-      color: #94a3b8 !important;
-      font-weight: normal;
-    }
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3,h4{margin:0;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 
-    /* 달력 내부 이벤트 학년별 커스텀 색상 */
-    .fc-event {
-      cursor: pointer;
-      font-size: 0.75rem;
-      padding: 2px 4px;
-      border-radius: 4px;
-      margin-top: 2px !important;
-      border: none !important;
-    }
-    /* 1학년: 노랑 */
-    .event-g1 {
-      background-color: #f59e0b !important;
-      color: #000000 !important;
-      font-weight: 600;
-    }
-    /* 2학년: 초록 */
-    .event-g2 {
-      background-color: #10b981 !important;
-      color: #ffffff !important;
-      font-weight: 500;
-    }
-    /* 3학년: 파랑 */
-    .event-g3 {
-      background-color: #3b82f6 !important;
-      color: #ffffff !important;
-      font-weight: 500;
-    }
-    /* 특이사항 사유: 빨강 */
-    .event-reason {
-      background-color: #ef4444 !important;
-      color: #ffffff !important;
-    }
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.mark{width:38px;height:38px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:18px;flex:none}
+.brand h1{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.brand p{margin:0;font-size:12.5px;color:var(--ink-2)}
+.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sync{font-size:12px;color:var(--ink-3);display:inline-flex;align-items:center;gap:6px}
+.sync::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
+.sync.ok::before{background:var(--good)} .sync.busy::before{background:var(--warn)} .sync.err::before{background:var(--bad)}
+.mode{font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:999px;background:var(--surface-2);color:var(--ink-2)}
+.mode.admin{background:var(--good-soft);color:var(--good)}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs button{border:0;background:none;padding:10px 16px 11px;font-weight:600;color:var(--ink-2);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-current="page"]{color:var(--accent);border-bottom-color:var(--accent)}
 
-    .tab-btn {
-      font-weight: 600;
-      padding: 8px 18px;
-      border-radius: 8px;
-    }
-    .tab-btn.active {
-      background-color: var(--primary-color) !important;
-      color: white !important;
-    }
-    
-    .weekly-day-box {
-      background: #f1f5f9;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 15px;
-    }
-  </style>
+main{padding-block:20px 60px}
+.stack{display:flex;flex-direction:column;gap:18px}
+.grid{display:grid;gap:18px}
+.g-home{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.35fr)}
+.g-2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.g-dutyset{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}
+@media (max-width:1100px){.g-home{grid-template-columns:1fr 1fr}.g-home>:first-child{grid-column:1/-1}}
+@media (max-width:760px){.g-home,.g-2,.g-dutyset{grid-template-columns:1fr}.g-home>:first-child{grid-column:auto}}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0}
+.panel.flat{background:transparent;border:0;padding:0}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.ph h2{font-size:16px;font-weight:700}
+.ph h3{font-size:14.5px;font-weight:700}
+.eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.06em;color:var(--ink-3)}
+.muted{color:var(--ink-2)} .small{font-size:12.5px} .tiny{font-size:11.5px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.spacer{flex:1}
+
+/* controls */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:7px 13px;border-radius:7px;font-weight:600;font-size:13.5px;cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--ink-3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.07)}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.btn.danger.solid{background:var(--bad);color:var(--surface);border-color:var(--bad)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm{padding:4px 9px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field>span{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+input[type=text],input[type=date],input[type=number],input[type=password],select,textarea{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:6px 8px;min-width:0;width:100%}
+input:disabled,select:disabled,textarea:disabled{background:var(--surface-2);color:var(--ink-2);cursor:not-allowed}
+textarea{resize:vertical}
+.chk{display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;white-space:nowrap;padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.chk input{margin:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:6px 13px;font-weight:600;font-size:13px;cursor:pointer;color:var(--ink-2)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+
+/* tags */
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:5px;white-space:nowrap}
+.t-ok{background:var(--good-soft);color:var(--good)} .t-warn{background:var(--warn-soft);color:var(--warn)} .t-bad{background:var(--bad-soft);color:var(--bad)} .t-mute{background:var(--surface-2);color:var(--ink-2)}
+.loc{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.loc::before{content:"";width:8px;height:8px;border-radius:2px;background:currentColor}
+.loc.DORM{color:var(--l1)} .loc.STUDY_12{color:var(--l2)} .loc.STUDY_3{color:var(--l3)}
+.gr{font-weight:600}.gr.g1{color:var(--g1)}.gr.g2{color:var(--g2)}.gr.g3{color:var(--g3)}
+
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.tw.tall{max-height:640px;overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line-2);text-align:center;vertical-align:middle}
+thead th{background:var(--surface-2);font-weight:600;font-size:12.5px;color:var(--ink-2);position:sticky;top:0;z-index:1;white-space:nowrap}
+thead tr+tr th{top:33px}
+tbody tr:hover td{background:color-mix(in srgb,var(--accent-soft) 35%,transparent)}
+td.l,th.l{text-align:left}
+td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.hol td{background:var(--hol)} tr.we td{background:var(--we)}
+tr.today td{box-shadow:inset 0 2px 0 var(--accent),inset 0 -2px 0 var(--accent)}
+tr.month-start td{border-top:2px solid var(--line)}
+tfoot td{background:var(--surface-2);font-weight:700}
+.cell-x{color:var(--ink-3)}
+.cell-none{color:var(--bad);font-weight:600}
+.cell-input{width:64px;text-align:center;padding:4px;font-family:var(--f-mono)}
+.cell-input.warn{border-color:var(--warn);background:var(--warn-soft)}
+.manual{font-size:10.5px;color:var(--warn);font-weight:700;margin-left:3px}
+td select{padding:3px 5px;font-size:13px;min-width:92px}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.kpi{background:var(--surface-2);border-radius:7px;padding:12px}
+.kpi b{display:block;font-family:var(--f-mono);font-size:24px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--ink-2)}
+.duty-today{display:flex;flex-direction:column;gap:8px}
+.duty-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:7px}
+.duty-line strong{font-size:17px}
+
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) minmax(0,.5fr) minmax(0,.5fr);border-top:1px solid var(--line);border-left:1px solid var(--line);min-width:980px}
+.cal .hd{padding:7px;text-align:center;font-size:12.5px;font-weight:600;color:var(--ink-2);background:var(--surface-2);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.cal .hd.sat{color:var(--g3)} .cal .hd.sun{color:var(--bad)}
+.day{min-height:132px;padding:7px 8px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface);cursor:pointer;display:flex;flex-direction:column;gap:3px;text-align:left;border-top:0;border-left:0;font:inherit;color:inherit}
+.day:hover{background:color-mix(in srgb,var(--accent-soft) 45%,var(--surface))}
+.day.other{background:var(--surface-2);opacity:.55}
+.day.we{background:var(--we)}
+.day.hol{background:var(--hol)}
+.day.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.day .dn{font-family:var(--f-mono);font-weight:600;font-size:13px}
+.day.sun .dn{color:var(--bad)} .day.sat .dn{color:var(--g3)}
+.day .hr{font-size:11.5px;font-weight:600;color:var(--bad)}
+.day .dl{display:flex;gap:5px;font-size:12px;align-items:baseline;min-width:0}
+.day .dl i{font-style:normal;font-size:10.5px;font-weight:700;width:46px;flex:none}
+.day .dl i.DORM{color:var(--l1)} .day .dl i.STUDY_12{color:var(--l2)} .day .dl i.STUDY_3{color:var(--l3)}
+.day .dl span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.day .dl .ex{color:var(--bad);font-weight:600;font-size:11.5px}
+.day.phol{background:linear-gradient(180deg,var(--hol) 0,var(--hol) 26px,var(--surface) 26px)}
+.day.focus{box-shadow:inset 0 0 0 3px var(--warn)}
+@media (prefers-reduced-motion:no-preference){.day.focus{animation:pulse 1.2s ease-out 2}@keyframes pulse{50%{background:var(--warn-soft)}}}
+.mine-row{cursor:pointer}
+.mine-row.past td{color:var(--ink-3)}
+.chart .b1{fill:color-mix(in srgb,var(--g1) 30%,var(--surface))} .chart .b2{fill:color-mix(in srgb,var(--g2) 30%,var(--surface))} .chart .b3{fill:color-mix(in srgb,var(--g3) 30%,var(--surface))}
+.chart .ln{fill:none;stroke-width:2.5;stroke-linejoin:round}
+.chart .ln1{stroke:var(--g1)} .chart .ln2{stroke:var(--g2)} .chart .ln3{stroke:var(--g3)}
+.chart .pt1{fill:var(--g1)} .chart .pt2{fill:var(--g2)} .chart .pt3{fill:var(--g3)}
+.chart .pt{stroke:var(--surface);stroke-width:2}
+.chart .vl{font-size:11px;font-weight:600;fill:var(--ink)}
+.rep-tables{display:flex;flex-direction:column;gap:12px;overflow-x:auto}
+.rep-tables table{font-size:13px}
+.rep-tables th,.rep-tables td{border:1px solid var(--line-2);padding:6px 8px}
+.rep-tables caption{caption-side:top;text-align:left;font-weight:700;font-size:13px;padding:0 0 6px}
+.day .st{display:flex;gap:3px;flex-wrap:wrap;margin-top:auto}
+.pill{font-family:var(--f-mono);font-size:10.5px;font-weight:600;padding:1px 5px;border-radius:4px}
+.pill.g1{background:var(--g1-soft);color:var(--g1)} .pill.g2{background:var(--g2-soft);color:var(--g2)} .pill.g3{background:var(--g3-soft);color:var(--g3)}
+.pill.rs{background:var(--bad-soft);color:var(--bad);font-family:var(--f-sans)}
+
+/* bars */
+.bar{position:relative;height:8px;background:var(--surface-2);border-radius:4px;min-width:90px}
+.bar>i{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--accent)}
+.bar>b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink-2)}
+.chart text{fill:var(--ink-2);font-size:12px;font-family:var(--f-sans)}
+.chart .grid line{stroke:var(--line-2)}
+.chart .a1{fill:var(--g1-soft)} .chart .t1{fill:var(--g1)}
+.chart .a2{fill:var(--g2-soft)} .chart .t2{fill:var(--g2)}
+.chart .a3{fill:var(--g3-soft)} .chart .t3{fill:var(--g3)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+.note{border:1px solid var(--line);border-left:4px solid var(--warn);background:var(--warn-soft);border-radius:7px;padding:12px 14px;font-size:13.5px}
+.note.ok{border-left-color:var(--good);background:var(--good-soft)}
+.note.info{border-left-color:var(--accent);background:var(--accent-soft)}
+.note p{margin:3px 0}
+.rules{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px;font-size:13.5px}
+.empty{padding:36px 18px;text-align:center;color:var(--ink-2)}
+.empty h3{font-size:16px;color:var(--ink);margin-bottom:6px}
+.sub-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.datelist{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-2);text-align:left;line-height:1.6;max-width:420px}
+.report-text{white-space:pre-wrap;font-size:13px;background:var(--surface-2);border-radius:7px;padding:12px 14px;margin:0;font-family:var(--f-sans);line-height:1.65;max-height:320px;overflow:auto}
+.form-line{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.form-line .field{flex:1 1 140px}
+.t-add{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(100px,.8fr) minmax(140px,1fr) minmax(120px,1fr) auto auto minmax(250px,1.5fr) auto;gap:10px;align-items:end}
+.t-add .field>span{white-space:nowrap}
+.t-add input,.t-add select,.t-add .btn,.t-add .chk{height:38px;box-sizing:border-box}
+.t-add .chk{padding-block:0}
+.t-add .days{display:flex;gap:4px}
+.t-add .range{display:flex;align-items:center;gap:4px}
+.t-add .range input{flex:1}
+@media (max-width:1500px){.t-add{grid-template-columns:repeat(4,minmax(0,1fr))}.t-add>:nth-child(6),.t-add>:nth-child(7){grid-column:span 2}}
+@media (max-width:760px){.t-add{grid-template-columns:1fr 1fr}.t-add>:nth-child(6),.t-add>:nth-child(7){grid-column:1/-1}}
+.box{border:1px solid var(--line);border-radius:7px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.box h4{font-size:13.5px}
+
+/* modal / toast */
+.ov{position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 45%,transparent);display:grid;place-items:center;z-index:50;padding:20px}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:10px;width:min(560px,100%);max-height:calc(100% - 40px);overflow:auto;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 40px rgba(0,0,0,.25)}
+.modal.wide{width:min(860px,100%)}
+.modal h3{font-size:17px}
+.mf{display:flex;justify-content:flex-end;gap:8px}
+.g-grade{display:grid;grid-template-columns:110px repeat(2,minmax(0,1fr));gap:8px;align-items:center}
+.g-grade>b{font-size:13px}
+#toastRoot{position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:60}
+.toast{background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:8px;font-size:13.5px;max-width:380px;box-shadow:0 8px 20px rgba(0,0,0,.2)}
+.toast.err{background:var(--bad);color:var(--surface)}
+@media (prefers-reduced-motion:no-preference){.toast{animation:tin .18s ease-out}@keyframes tin{from{transform:translateY(6px);opacity:0}}}
+</style>
 </head>
 <body>
-
-  <!-- 상단 네비게이션 (관리자, 교사 순) -->
-  <nav class="navbar navbar-dark navbar-custom px-4 py-3 mb-4">
-    <div class="container-fluid d-flex justify-content-between align-items-center">
-      <span class="navbar-brand mb-0 h1 fs-4 fw-bold">
-        <i class="fa-solid fa-graduation-cap me-2"></i>자기주도학습 현황 관리
-      </span>
-      <div class="d-flex gap-2">
-        <button id="btnAdminTab" class="btn btn-outline-light tab-btn" onclick="openAdminAuthModal()">
-          <i class="fa-solid fa-user-gear me-1"></i> 관리자
-        </button>
-        <button id="btnTeacherTab" class="btn btn-outline-light tab-btn active" onclick="switchTab('teacher')">
-          <i class="fa-solid fa-chalkboard-user me-1"></i> 교사
-        </button>
-      </div>
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">自</div>
+      <div><h1>자기주도학습 통합 관리</h1><p id="termLabel">감독 배정 · 공정성 검증 · 참여 현황 보고</p></div>
     </div>
+    <div class="top-actions">
+      <span id="syncBadge" class="sync">불러오는 중</span>
+      <span id="modeBadge" class="mode">열람 전용</span>
+      <button id="authBtn" class="btn" type="button">코드로 로그인</button>
+    </div>
+  </div>
+  <nav class="wrap tabs" id="tabs" aria-label="메뉴">
+    <button type="button" data-tab="home">근무 확인</button>
+    <button type="button" data-tab="calendar">통합 달력</button>
+    <button type="button" data-tab="report">참여 현황 보고</button>
+    <button type="button" data-tab="duty">감독 배정</button>
+    <button type="button" data-tab="fairness">공정성 검증</button>
   </nav>
+</header>
+<main class="wrap" id="view"><div class="panel empty"><h3>불러오는 중입니다</h3><p>감독 배정표와 참여 기록을 가져오고 있습니다.</p></div></main>
+<div id="modalRoot"></div>
+<div id="toastRoot" aria-live="polite"></div>
 
-  <div class="container-fluid px-4">
-    
-    <!-- 교사 탭 콘텐츠 -->
-    <div id="teacherView">
-      <div class="row g-4">
-        <!-- 메인 달력 카드 -->
-        <div class="col-lg-7">
-          <div class="card card-custom p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="fw-bold mb-0"><i class="fa-regular fa-calendar-days me-2 text-primary"></i>학습 현황 달력</h5>
-              <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-primary" onclick="goToToday()">
-                  <i class="fa-solid fa-location-crosshairs me-1"></i> 오늘
-                </button>
-                <button class="btn btn-sm btn-primary" onclick="openDataModal()">
-                  <i class="fa-solid fa-plus me-1"></i> 현황 기록하기
-                </button>
-                <button class="btn btn-sm btn-success" onclick="openExportModal()">
-                  <i class="fa-solid fa-file-excel me-1"></i> 엑셀 내보내기
-                </button>
-              </div>
-            </div>
-            <div id="calendar"></div>
-          </div>
-        </div>
+<script>
+/*CORE-START*/
+const LOCS = ['DORM','STUDY_12','STUDY_3'];
+const LOC_NAME = {ALL:'전체', DORM:'기숙사', STUDY_12:'여학생정독실·1,2자습실', STUDY_3:'3학년 자습실'};
+const LOC_SHORT = {DORM:'기숙사', STUDY_12:'1·2자습실', STUDY_3:'3학년실'};
+const DOW = ['일','월','화','수','목','금','토'];
+const pd = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const fd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const addD = (s, n) => { const d = pd(s); d.setDate(d.getDate()+n); return fd(d); };
+const dowOf = s => pd(s).getDay();
+const mondayOf = s => { const d = pd(s); const w = d.getDay(); d.setDate(d.getDate() - (w === 0 ? 6 : w - 1)); return fd(d); };
+const md = s => { const d = pd(s); return `${d.getMonth()+1}.${d.getDate()}`; };
+const isName = v => !!v && v !== 'X' && v !== '!';
 
-        <!-- 하단 그래프 및 대시보드 카드 -->
-        <div class="col-lg-5">
-          <div class="card card-custom p-4 mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="fw-bold mb-0"><i class="fa-solid fa-chart-column me-2 text-primary"></i>주간/월간 참여 현황</h5>
-              <small class="text-muted" id="chartSubTitle">최근 등록 데이터</small>
-            </div>
-            <div style="height: 260px;">
-              <canvas id="studyChart"></canvas>
-            </div>
-          </div>
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
-          <div class="card card-custom p-4">
-            <h5 class="fw-bold mb-3"><i class="fa-solid fa-table me-2 text-primary"></i>일별 집계 요약</h5>
-            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
-              <table class="table table-hover align-middle text-center" id="summaryTable">
-                <thead class="table-light">
-                  <tr>
-                    <th>날짜</th>
-                    <th>1학년(참여/신청)</th>
-                    <th>2학년(참여/신청)</th>
-                    <th>3학년(참여/신청)</th>
-                    <th>합계(참여/신청)</th>
-                  </tr>
-                </thead>
-                <tbody id="summaryTableBody">
-                  <!-- JS Dynamic Content -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+function holidaysOn(duty, ds){ return duty.holidays.filter(h => h.date === ds); }
+function isLocHoliday(duty, ds, loc){ return duty.holidays.some(h => h.date === ds && (h.locs.includes('ALL') || h.locs.includes(loc))); }
+function holidayNote(duty, ds){
+  return holidaysOn(duty, ds).map(h => (h.locs.includes('ALL') ? '' : `[${h.locs.map(l => LOC_SHORT[l] || l).join(',')}] `) + h.reason).join(', ');
+}
+function sigOf(duty){
+  const s = JSON.stringify({st:{...duty.settings, pin:undefined}, h:duty.holidays.map(h=>[h.date,h.locs]), t:duty.teachers.map(t=>[t.name,t.loc,t.exclude,t.offDays,t.prevEnd,t.leaveStart,t.leaveEnd])});
+  let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return String(h >>> 0);
+}
 
-    <!-- 관리자 탭 콘텐츠 -->
-    <div id="adminView" style="display: none;">
-      <div class="alert alert-warning d-flex align-items-center justify-content-between mb-4" role="alert">
-        <div class="d-flex align-items-center">
-          <i class="fa-solid fa-shield-halved fs-4 me-3"></i>
-          <div>
-            <strong>관리자 모드 활성화됨:</strong> 학생 수 수정, 일정 기록(공휴일/모의고사 등) 및 데이터 일괄 삭제 관리가 가능합니다.
-          </div>
-        </div>
-        <button class="btn btn-danger btn-sm" onclick="openBulkDeleteModal()">
-          <i class="fa-solid fa-trash-can me-1"></i> 데이터 기간별 일괄 삭제
-        </button>
-      </div>
-
-      <div class="row g-4">
-        <!-- 행사/특이사항 사전 등록 -->
-        <div class="col-md-5">
-          <div class="card card-custom p-4">
-            <h5 class="fw-bold mb-3"><i class="fa-solid fa-calendar-plus me-2 text-danger"></i>특이사항(행사/공휴일) 사전 등록</h5>
-            <form id="adminScheduleForm">
-              <div class="mb-3">
-                <label class="form-label font-weight-bold">일자 지정</label>
-                <input type="date" class="form-control" id="scheduleDate" required>
-              </div>
-              <div class="mb-3">
-                <label class="form-label">구분/사유 예시</label>
-                <select class="form-select mb-2" onchange="setScheduleReason(this.value)">
-                  <option value="">-- 직접 입력 또는 선택 --</option>
-                  <option value="공휴일">공휴일 (광복절, 추석 등)</option>
-                  <option value="전국연합모의고사">전국연합모의고사</option>
-                  <option value="체험학습">현장체험학습 / 재량휴업일</option>
-                  <option value="정기시험">1학기/2학기 정기시험</option>
-                </select>
-                <input type="text" class="form-control" id="scheduleReason" placeholder="사유를 입력하세요 (예: 광복절, 모의고사)" required>
-              </div>
-              <!-- 명칭 변경: 일정 기록하기 -->
-              <button type="submit" class="btn btn-danger w-100"><i class="fa-solid fa-floppy-disk me-1"></i> 일정 기록하기</button>
-            </form>
-          </div>
-        </div>
-
-        <!-- 기존 데이터 자유 관리/수정 -->
-        <div class="col-md-7">
-          <div class="card card-custom p-4">
-            <h5 class="fw-bold mb-3"><i class="fa-solid fa-pen-to-square me-2 text-warning"></i>등록된 데이터 수정 및 관리</h5>
-            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-              <table class="table table-bordered text-center align-middle">
-                <thead class="table-dark">
-                  <tr>
-                    <th>날짜</th>
-                    <th>유형</th>
-                    <th>내용/현황 요약</th>
-                    <th>관리</th>
-                  </tr>
-                </thead>
-                <tbody id="adminDataTableBody">
-                  <!-- Dynamic render -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Modal: 관리자 인증 -->
-  <div class="modal fade" id="adminAuthModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title fw-bold"><i class="fa-solid fa-lock me-2"></i>관리자 인증</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <p class="small text-muted mb-2">관리자 번호를 입력해 주세요.</p>
-          <input type="password" id="adminPinInput" class="form-control text-center fs-4" placeholder="••••" maxlength="4">
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary w-100" onclick="verifyAdminPin()">확인</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: 현황 입력 -->
-  <div class="modal fade" id="dataInputModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title fw-bold" id="modalTitle"><i class="fa-solid fa-pen-field me-2"></i>자기주도학습 현황 입력</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          
-          <!-- 명칭 변경: 주간 단위 입력 -->
-          <ul class="nav nav-pills nav-fill mb-3" id="inputModeTab">
-            <li class="nav-item">
-              <button class="nav-link active fw-bold" id="daily-tab" data-bs-toggle="tab" data-bs-target="#dailyInputArea" type="button" onclick="setMode('daily')">일일 단위 입력</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link fw-bold" id="weekly-tab" data-bs-toggle="tab" data-bs-target="#weeklyInputArea" type="button" onclick="setMode('weekly')">주간 단위 입력</button>
-            </li>
-          </ul>
-
-          <div class="tab-content">
-            <!-- 1. 일일 입력 영역 -->
-            <div class="tab-pane fade show active" id="dailyInputArea">
-              <form id="studyDataFormDaily">
-                <div class="row mb-3">
-                  <div class="col-md-6">
-                    <label class="form-label fw-bold">기록 일자</label>
-                    <input type="date" id="inputDate" class="form-control" required>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label fw-bold">특이사항/휴업 사유 (해당 시 입력)</label>
-                    <input type="text" id="inputReason" class="form-control" placeholder="예: 광복절, 모의고사, 체험학습 등">
-                  </div>
-                </div>
-
-                <hr>
-
-                <!-- 1학년 -->
-                <div class="mb-3">
-                  <h6 class="fw-bold text-primary"><i class="fa-solid fa-user-graduate me-1"></i> 1학년</h6>
-                  <div class="row g-2">
-                    <div class="col-6"><input type="number" id="g1_apply" class="form-control" placeholder="신청자 수 (명)" min="0"></div>
-                    <div class="col-6"><input type="number" id="g1_attend" class="form-control" placeholder="참여자 수 (명)" min="0"></div>
-                  </div>
-                </div>
-
-                <!-- 2학년 -->
-                <div class="mb-3">
-                  <h6 class="fw-bold text-primary"><i class="fa-solid fa-user-graduate me-1"></i> 2학년</h6>
-                  <div class="row g-2">
-                    <div class="col-6"><input type="number" id="g2_apply" class="form-control" placeholder="신청자 수 (명)" min="0"></div>
-                    <div class="col-6"><input type="number" id="g2_attend" class="form-control" placeholder="참여자 수 (명)" min="0"></div>
-                  </div>
-                </div>
-
-                <!-- 3학년 -->
-                <div class="mb-3 p-3 bg-light rounded border">
-                  <h6 class="fw-bold text-primary"><i class="fa-solid fa-user-graduate me-1"></i> 3학년 (남/여 별도 기록 및 자동 합산)</h6>
-                  <div class="row g-2 mb-2">
-                    <div class="col-3"><span class="form-control-plaintext text-end fw-bold">남학생:</span></div>
-                    <div class="col-4"><input type="number" id="g3_m_apply" class="form-control form-control-sm" placeholder="남 신청 (명)" oninput="calcG3Total()"></div>
-                    <div class="col-4"><input type="number" id="g3_m_attend" class="form-control form-control-sm" placeholder="남 참여 (명)" oninput="calcG3Total()"></div>
-                  </div>
-                  <div class="row g-2 mb-2">
-                    <div class="col-3"><span class="form-control-plaintext text-end fw-bold">여학생:</span></div>
-                    <div class="col-4"><input type="number" id="g3_f_apply" class="form-control form-control-sm" placeholder="여 신청 (명)" oninput="calcG3Total()"></div>
-                    <div class="col-4"><input type="number" id="g3_f_attend" class="form-control form-control-sm" placeholder="여 참여 (명)" oninput="calcG3Total()"></div>
-                  </div>
-                  <div class="row g-2 pt-2 border-top">
-                    <div class="col-3"><span class="form-control-plaintext text-end fw-bold text-dark">3학년 합계:</span></div>
-                    <div class="col-4"><input type="number" id="g3_apply" class="form-control form-control-sm bg-white" placeholder="총 신청 수" readonly></div>
-                    <div class="col-4"><input type="number" id="g3_attend" class="form-control form-control-sm bg-white" placeholder="총 참여 수" readonly></div>
-                  </div>
-                </div>
-
-                <div class="modal-footer px-0 pb-0">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-                  <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-1"></i> 저장하기</button>
-                </div>
-              </form>
-            </div>
-
-            <!-- 2. 주간 단위 입력 영역 -->
-            <div class="tab-pane fade" id="weeklyInputArea">
-              <div class="mb-3 bg-light p-3 rounded border">
-                <label class="form-label fw-bold">주간 시작일(월요일) 선택</label>
-                <input type="date" id="weeklyStartDate" class="form-control" onchange="generateWeeklyForm()">
-              </div>
-              <form id="studyDataFormWeekly">
-                <div id="weeklyFormContainer">
-                  <!-- 요일별 입력 필드 동적 생성 -->
-                </div>
-                <div class="modal-footer px-0 pb-0">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-                  <button type="submit" class="btn btn-success"><i class="fa-solid fa-check me-1"></i> 주간 데이터 일괄 저장</button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: 관리자 데이터 일괄 삭제 -->
-  <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header bg-danger text-white">
-          <h5 class="modal-title fw-bold"><i class="fa-solid fa-trash-can me-2"></i>데이터 기간별 일괄 삭제 (초기화)</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <p class="text-danger fw-bold mb-2">⚠️ 선택한 기간의 모든 입력 데이터가 일괄 삭제됩니다.</p>
-          <div class="mb-3">
-            <label class="form-label fw-bold">삭제할 기간 선택</label>
-            <div class="input-group">
-              <input type="date" id="deleteStartDate" class="form-control">
-              <span class="input-group-text">~</span>
-              <input type="date" id="deleteEndDate" class="form-control">
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-          <button type="button" class="btn btn-danger" onclick="executeBulkDelete()"><i class="fa-solid fa-trash-can me-1"></i> 일괄 삭제 실행</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: 엑셀 내보내기 -->
-  <div class="modal fade" id="exportModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header bg-success text-white">
-          <h5 class="modal-title fw-bold"><i class="fa-solid fa-file-excel me-2"></i>엑셀 데이터 내보내기</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label fw-bold">내보낼 기간 선택</label>
-            <div class="input-group">
-              <input type="date" id="exportStartDate" class="form-control">
-              <span class="input-group-text">~</span>
-              <input type="date" id="exportEndDate" class="form-control">
-            </div>
-          </div>
-          <div class="d-flex gap-2 mb-3">
-            <button class="btn btn-sm btn-outline-secondary" onclick="setExportRange('week')">이번 주 설정</button>
-            <button class="btn btn-sm btn-outline-secondary" onclick="setExportRange('month')">이번 달 설정</button>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-          <button type="button" class="btn btn-success" onclick="exportToExcel()"><i class="fa-solid fa-download me-1"></i> 다운로드</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bootstrap 5 JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-  <script>
-    const DB_KEY = "SELF_STUDY_DATA_V3";
-    
-    // --- 1. 데이터 마이그레이션(기존 데이터 자동 보존) 로직 ---
-    function loadDataWithMigration() {
-      let currentData = JSON.parse(localStorage.getItem(DB_KEY)) || {};
-      
-      // 이전 버전 키 목록 검사
-      const oldKeys = ["SELF_STUDY_DATA_V1", "SELF_STUDY_DATA_V2"];
-      oldKeys.forEach(oldKey => {
-        const oldData = JSON.parse(localStorage.getItem(oldKey));
-        if (oldData) {
-          // 기존 데이터를 새 데이터 저장소에 병합 (손실 방지)
-          currentData = Object.assign({}, oldData, currentData);
-        }
-      });
-
-      // 병합된 통합 데이터를 현재 키에 최신화 저장
-      localStorage.setItem(DB_KEY, JSON.stringify(currentData));
-      return currentData;
-    }
-
-    let dbData = loadDataWithMigration();
-    let calendar;
-    let chartInstance;
-    let isAdmin = false;
-    let currentInputMode = 'daily';
-
-    document.addEventListener('DOMContentLoaded', function() {
-      initCalendar();
-      initChart();
-      updateAllViews();
-      
-      const todayStr = new Date().toISOString().split('T')[0];
-      document.getElementById('inputDate').value = todayStr;
-      document.getElementById('scheduleDate').value = todayStr;
-      
-      setMondayForWeekly(new Date());
+/* 배정 원칙: 장소별 명단 → 불가 요일·기간 제외 → (금요일이면 금요일 횟수 적은 순) → 누적 횟수 적은 순 → 마지막 근무가 오래된 순 → 시드 고정 무작위 */
+function generateSchedule(duty, target, seed, keepPins){
+  const rng = mulberry32(seed);
+  const st = duty.settings;
+  const pools = {};
+  LOCS.forEach(l => pools[l] = duty.teachers.filter(t => !t.exclude && t.loc === l).map(t => ({t, count:0, fri:0, last: t.prevEnd ? -5 : -99})));
+  const prev = {}; (duty.schedule || []).forEach(r => prev[r.date] = r);
+  /* 직접 지정(고정) 칸: keepPins면 그대로 두고, 그 횟수를 미리 셈에 넣어 나머지 칸으로 균형을 맞춘다 */
+  const pins = {};
+  if (keepPins) (duty.schedule || []).forEach(r => LOCS.forEach(l => {
+    if (r.wk || !(r.m && r.m[l]) || !isName(r.c[l]) || (target !== 'ALL' && target !== l)) return;
+    if (r.date < st.start || r.date > st.end || isLocHoliday(duty, r.date, l) || r.date > (st.ends[l] || st.end)) return;
+    const pp = pools[l].find(x => x.t.name === r.c[l]); if (!pp) return;
+    (pins[r.date] = pins[r.date] || {})[l] = pp; pp.count++; if (r.w === 5) pp.fri++;
+  }));
+  const out = []; let idx = 0;
+  const pick = (pool, fri, dw, ds) => {
+    const av = pool.filter(p => !(p.t.offDays || []).includes(dw) && !(p.t.leaveStart && p.t.leaveEnd && ds >= p.t.leaveStart && ds <= p.t.leaveEnd));
+    if (!av.length) return '!';
+    av.forEach(p => p.r = rng());
+    av.sort((a, b) => (fri ? a.fri - b.fri : 0) || (a.count - b.count) || (a.last - b.last) || (a.r - b.r));
+    const s = av[0]; s.count++; if (fri) s.fri++; s.last = idx; return s.t.name;
+  };
+  for (let ds = st.start; ds <= st.end; ds = addD(ds, 1)){
+    const w = dowOf(ds), wk = (w === 0 || w === 6);
+    const sps = duty.specials.filter(s => s.date === ds);
+    if (wk && !sps.length) continue;
+    const p = prev[ds] || {};
+    const row = {date:ds, w, wk, c:{}, sp:{}, m:{}, note: holidayNote(duty, ds)};
+    LOCS.forEach(l => {
+      const sp = sps.find(s => s.loc === l);
+      if (sp){ row.c[l] = sp.assigned || ''; row.sp[l] = true; if (sp.note && !row.note) row.note = sp.note; return; }
+      if (wk){ row.c[l] = 'X'; return; }
+      if (target !== 'ALL' && target !== l){ row.c[l] = (p.c && p.c[l] !== undefined) ? p.c[l] : 'X'; if (p.m && p.m[l]) row.m[l] = true; return; }
+      const pin = pins[ds] && pins[ds][l];
+      if (pin){ row.c[l] = pin.t.name; row.m[l] = true; pin.last = idx; return; }
+      const end = st.ends[l] || st.end;
+      row.c[l] = (isLocHoliday(duty, ds, l) || ds > end) ? 'X' : pick(pools[l], w === 5, DOW[w], ds);
     });
+    out.push(row);
+    if (!wk) idx++;
+  }
+  return out;
+}
 
-    // --- FullCalendar 달력 초기화 ---
-    function initCalendar() {
-      const calendarEl = document.getElementById('calendar');
-      calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        locale: 'ko',
-        headerToolbar: {
-          left: 'prev,next',
-          center: 'title',
-          right: 'dayGridMonth,listWeek'
-        },
-        selectable: true,
-        dateClick: function(info) {
-          if(isAdmin) {
-            document.getElementById('scheduleDate').value = info.dateStr;
-          }
-          openDataModal(info.dateStr);
-        },
-        events: getCalendarEvents()
-      });
-      calendar.render();
+function computeStats(duty){
+  const key = (l, n) => l + '|' + n;
+  const per = {};
+  duty.teachers.forEach(t => per[key(t.loc, t.name)] = {wd:0, fri:0, we:0, manual:0, dates:[]});
+  const need = {}, none = {}, friNeed = {}; LOCS.forEach(l => { need[l] = 0; none[l] = 0; friNeed[l] = 0; });
+  (duty.schedule || []).forEach(r => LOCS.forEach(l => {
+    const v = r.c[l], sp = r.sp && r.sp[l];
+    if (!sp && !r.wk && v !== 'X'){ need[l]++; if (r.w === 5) friNeed[l]++; }
+    if (v === '!'){ none[l]++; return; }
+    if (!isName(v)) return;
+    const p = per[key(l, v)]; if (!p) return;
+    if (sp || r.wk) p.we++; else { p.wd++; if (r.w === 5) p.fri++; }
+    if (r.m && r.m[l]) p.manual++;
+    p.dates.push(r.date);
+  }));
+  const locs = {};
+  LOCS.forEach(l => {
+    const list = duty.teachers.filter(t => !t.exclude && t.loc === l);
+    const cs = list.map(t => per[key(l, t.name)].wd);
+    const slots = cs.reduce((a, b) => a + b, 0);
+    locs[l] = {n:list.length, slots, need:need[l], none:none[l], friNeed:friNeed[l], avg: list.length ? slots / list.length : 0,
+      min: cs.length ? Math.min(...cs) : 0, max: cs.length ? Math.max(...cs) : 0,
+      friMax: list.length ? Math.max(...list.map(t => per[key(l, t.name)].fri)) : 0};
+  });
+  return {per, locs, key};
+}
+/*CORE-END*/
+
+/* ---------- 기본 데이터 (관리자 '기본값 불러오기' 및 오프라인 사용 시) ---------- */
+const DEFAULT_ROSTER = {
+  DORM:'강래명*교문지도,김기완*교문지도,이지호,박철규,안정애,김성호^,정혜섭,이태영,정주영,김수연,이경민,김승권,신지현,정광진,방형협,최종문,송제택,이우선,윤혜경,유석만,이승영,임준,백승혁,박정기*교문지도,임태관*교문지도,황현지*교문지도',
+  STUDY_12:'조정혜,노정은,이은재,정소은,윤해님,오송이,정은영,김보경,지정민,김가영,배현주,임은실,정혜진,김소연,정다운,박신영,김유미,서승안*교문지도,이미정*교문지도,이재현*교문지도',
+  STUDY_3:'박수선,김양현,권희진,박보라,박은혜,장금주,이영민,김성현,김병준,신현준,박지원,홍현선*교문지도,김대현*교문지도'
+};
+function defaultDuty(){
+  let id = 1; const teachers = [];
+  LOCS.forEach(loc => DEFAULT_ROSTER[loc].split(',').forEach(raw => {
+    let name = raw, exclude = '', prevEnd = false;
+    if (name.endsWith('^')){ prevEnd = true; name = name.slice(0, -1); }
+    if (name.includes('*')){ [name, exclude] = name.split('*'); }
+    teachers.push({id:id++, name, loc, exclude, offDays:[], prevEnd, leaveStart:'', leaveEnd:''});
+  }));
+  const S3 = ['STUDY_12','STUDY_3'], A = ['ALL'];
+  const H = [['2026-08-19','개학식',S3],['2026-09-02','전국연합학력평가(1,2) 대수능모의평가(3)',S3],['2026-09-23','추석연휴',A],['2026-09-24','추석연휴',A],['2026-09-25','추석연휴',A],['2026-10-05','대체공휴일',A],
+    ['2026-10-07','1차 정기시험',S3],['2026-10-08','1차 정기시험',S3],['2026-10-09','한글날',S3],['2026-10-12','1차 정기시험',S3],['2026-10-13','1차 정기시험',S3],['2026-10-20','전국연합학력평가',S3],
+    ['2026-11-18','예비소집일',A],['2026-11-19','대학수학능력시험',A],['2026-11-20','재량휴업일',A],['2026-12-14','2차 정기시험',S3],['2026-12-15','2차 정기시험',S3],['2026-12-16','2차 정기시험',S3],['2026-12-17','2차 정기시험',S3],['2026-12-18','2차 정기시험',A],
+    ['2026-12-24','동아리발표',A],['2026-12-25','성탄절',A],['2026-12-31','새벽별축제',A],['2027-01-01','신정',A],['2027-01-08','종업식, 졸업식',A]];
+  return {
+    settings:{term:'2학기', start:'2026-08-19', end:'2027-01-08', ends:{DORM:'2027-01-08', STUDY_12:'2027-01-08', STUDY_3:'2026-11-17'}, pin:'1954'},
+    holidays: H.map(([date, reason, locs]) => ({id:id++, date, reason, locs:[...locs]})),
+    teachers, specials:[], schedule:[], meta:{}, nextId: id + 10
+  };
+}
+
+/* ---------- 상태 ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyB-AIQnpAKofZl-JrysajbE86gqMiJKGoM",
+  authDomain: "study-management-hs.firebaseapp.com",
+  databaseURL: "https://study-management-hs-default-rtdb.firebaseio.com",
+  projectId: "study-management-hs",
+  storageBucket: "study-management-hs.firebasestorage.app",
+  messagingSenderId: "525356549226",
+  appId: "1:525356549226:web:632cd81ddb4b107e013613"
+};
+/* role: null(열람) | 'editor'(수정 권한 교사) | 'admin'(관리자). isAdmin = 수정 가능 여부, isSuper = 관리자(권한 코드 관리) */
+let duty = null, study = {}, fdb = null, uid = null, dl = null, backend = 'loading', isAdmin = false, isSuper = false;
+let role = null, myCode = '', myName = '', codes = {}, codeWatch = null, allCodesWatch = null, authOk = false;
+let loaded = {duty:false, study:false};
+const LS = {duty:'SSM_DUTY_V1', study:'SSM_STUDY_V1', ui:'SSM_UI_V1'};
+const lsGet = k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } };
+const todayStr = fd(new Date());
+let ui = Object.assign({tab:'home', month: todayStr.slice(0,7), week: mondayOf(todayStr), dutySub:'calendar', reportEdit:false, me:'', fairLoc:'ALL'}, lsGet(LS.ui) || {});
+ui.reportEdit = false;
+const saveUi = () => lsSet(LS.ui, ui);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const dis = () => isAdmin ? '' : 'disabled';
+const arr = x => Array.isArray(x) ? x.filter(v => v !== null && v !== undefined) : (x && typeof x === 'object') ? Object.values(x) : [];
+
+/* Realtime Database는 빈 배열·빈 객체를 저장하지 않으므로 읽을 때 기본값을 채운다 */
+function normalizeDuty(d){
+  if (!d) return null;
+  const base = defaultDuty();
+  d.settings = Object.assign({}, base.settings, d.settings || {});
+  d.settings.ends = Object.assign({}, base.settings.ends, (d.settings && d.settings.ends) || {});
+  d.holidays = arr(d.holidays).map(h => ({...h, locs: arr(h.locs).length ? arr(h.locs) : ['ALL']}));
+  d.teachers = arr(d.teachers).map(t => ({leaveStart:'', leaveEnd:'', exclude:'', prevEnd:false, ...t, offDays: arr(t.offDays)}));
+  d.specials = arr(d.specials).map(s => ({assigned:'', note:'', ...s}));
+  d.schedule = arr(d.schedule).map(r => ({...r, c: Object.assign({DORM:'X', STUDY_12:'X', STUDY_3:'X'}, r.c || {}), sp: r.sp || {}, m: r.m || {}, note: r.note || ''}));
+  d.meta = d.meta || {}; d.nextId = d.nextId || 1000;
+  return d;
+}
+
+/* ---------- 저장 계층 (Firebase Realtime Database) ---------- */
+let dutyTimer = null, dutyDirty = false, dutyWriting = false;
+function setSync(state, text){
+  const el = document.getElementById('syncBadge');
+  el.className = 'sync ' + ({saved:'ok', saving:'busy', error:'err'}[state] || '');
+  el.textContent = text || ({saved: backend === 'fb' ? '실시간 공유 중' : '이 브라우저에만 저장됨', saving:'저장 중…', error:'저장 실패'}[state] || '');
+}
+function saveDuty(){
+  dutyDirty = true;
+  if (backend !== 'fb'){ lsSet(LS.duty, duty); dutyDirty = false; setSync('saved'); return; }
+  setSync('saving'); clearTimeout(dutyTimer); dutyTimer = setTimeout(flushDuty, 500);
+}
+async function flushDuty(){
+  if (dutyWriting){ dutyTimer = setTimeout(flushDuty, 300); return; }
+  dutyWriting = true;
+  try { await fdb.ref('duty').set(clone(duty)); dutyDirty = false; setSync('saved'); }
+  catch(e){ dutyDirty = false; dbError(e); }
+  finally { dutyWriting = false; }
+}
+async function saveStudy(ds, rec){
+  if (rec) study[ds] = rec; else delete study[ds];
+  if (backend !== 'fb'){ lsSet(LS.study, study); setSync('saved'); return true; }
+  setSync('saving');
+  try { const ref = fdb.ref('study/' + ds); rec ? await ref.set(clone(rec)) : await ref.remove(); setSync('saved'); return true; }
+  catch(e){ dbError(e); return false; }
+}
+function dbError(e){
+  setSync('error');
+  const c = String((e && (e.code || e.message)) || '').toLowerCase();
+  if (c.includes('permission')) toast('수정 권한이 없거나 회수되었습니다. 관리자에게 받은 코드로 다시 로그인하세요.', true);
+  else toast('저장하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.', true);
+}
+
+async function initBackend(){
+  if (window.firebase && firebase.initializeApp){
+    try {
+      firebase.initializeApp(firebaseConfig);
+      fdb = firebase.database(); backend = 'fb';
+    } catch(e){ console.error(e); fdb = null; }
+  }
+  if (fdb){
+    fdb.ref('duty').on('value', s => {
+      if (dutyDirty || dutyWriting){ loaded.duty = true; return; }
+      duty = s.exists() ? normalizeDuty(s.val()) : null; loaded.duty = true; setSync('saved'); scheduleRender();
+    }, err => { console.error(err); loaded.duty = true; setSync('error', '데이터를 읽지 못함 — 보안 규칙 확인'); render(); });
+    fdb.ref('study').on('value', s => { study = s.val() || {}; loaded.study = true; scheduleRender(); },
+      err => { console.error(err); setSync('error', '참여 기록을 읽지 못함'); });
+    fdb.ref('.info/connected').on('value', s => { if (s.val() === false && loaded.duty) setSync('error', '연결 끊김 — 다시 연결 중'); else if (s.val()) setSync('saved'); });
+    try {
+      const cred = await firebase.auth().signInAnonymously(); uid = cred.user.uid; authOk = true;
+      const s = await fdb.ref('sessions/' + uid).get();
+      if (s.exists() && s.val().code) await attachCode(s.val().code, true);
+    } catch(e){ console.error(e); authOk = false; toast('Firebase 익명 로그인을 쓸 수 없어 열람만 가능합니다. (Authentication → 익명 사용 설정 확인)', true); }
+  } else {
+    backend = 'local';
+    duty = normalizeDuty(lsGet(LS.duty)) || defaultDuty();
+    if (!duty.schedule.length){ duty.meta = {seed: 20260819, generatedAt: Date.now(), sig: sigOf(duty)}; duty.schedule = generateSchedule(duty, 'ALL', 20260819); }
+    study = lsGet(LS.study) || {}; loaded = {duty:true, study:true};
+    setSync('saved', '오프라인 — 이 브라우저에만 저장됨'); render();
+  }
+}
+
+/* ---------- 권한 코드 ---------- */
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const newCode = () => { let c; do { c = Array.from({length:6}, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join(''); } while (codes[c]); return c; };
+const cleanCode = s => String(s || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+function setRole(entry, code){
+  role = entry ? entry.role : null; myCode = entry ? code : ''; myName = entry ? (entry.name || '') : '';
+  isAdmin = role === 'admin' || role === 'editor'; isSuper = role === 'admin';
+  if (allCodesWatch && !isSuper){ allCodesWatch(); allCodesWatch = null; codes = {}; }
+  if (isSuper && !allCodesWatch && fdb){
+    const ref = fdb.ref('access'), cb = ref.on('value', s => { codes = s.val() || {}; scheduleRender(); }, () => {});
+    allCodesWatch = () => ref.off('value', cb);
+  }
+  updateMode(); scheduleRender();
+}
+async function attachCode(code, silent){
+  const a = await fdb.ref('access/' + code).get();
+  if (!a.exists()){ if (silent){ fdb.ref('sessions/' + uid).remove().catch(() => {}); toast('이전에 쓰던 코드가 회수되어 열람 모드로 열었습니다.', true); } return false; }
+  await fdb.ref('sessions/' + uid).set({code, at: Date.now()});
+  if (codeWatch) codeWatch();
+  const ref = fdb.ref('access/' + code);
+  const cb = ref.on('value', s => {
+    if (!s.exists()){ const was = role; setRole(null); if (was) toast('관리자가 수정 권한을 회수했습니다. 지금부터 열람만 할 수 있습니다.', true); }
+    else setRole(s.val(), code);
+  }, () => {});
+  codeWatch = () => ref.off('value', cb);
+  return true;
+}
+async function logout(){
+  if (codeWatch){ codeWatch(); codeWatch = null; }
+  if (fdb && uid) await fdb.ref('sessions/' + uid).remove().catch(() => {});
+  setRole(null); toast('로그아웃했습니다. 열람 모드입니다.');
+}
+async function grantCode(teacherId){
+  if (!isSuper){ toast('관리자만 권한을 줄 수 있습니다.', true); return; }
+  const t = duty.teachers.find(x => x.id === teacherId); if (!t) return;
+  const code = newCode();
+  try { await fdb.ref('access/' + code).set({role:'editor', name:t.name, loc:t.loc, teacherId:t.id, createdAt: Date.now(), by: myName || '관리자'}); }
+  catch(e){ dbError(e); return; }
+  showCode(code, `${t.name} 선생님 (${LOC_NAME[t.loc]})`, 'editor');
+}
+async function addAdminCode(){
+  if (!isSuper) return;
+  const name = (document.getElementById('admName').value || '').trim() || '관리자';
+  const code = newCode();
+  try { await fdb.ref('access/' + code).set({role:'admin', name, createdAt: Date.now(), by: myName || '관리자'}); } catch(e){ dbError(e); return; }
+  showCode(code, name, 'admin');
+}
+function showCode(code, who, r){
+  openModal(`<h3>${r === 'admin' ? '관리자' : '수정 권한'} 코드를 만들었습니다</h3>
+    <p class="muted" style="margin:0">${esc(who)}께 아래 코드를 전달하세요. 오른쪽 위 <b>코드로 로그인</b>에 입력하면 ${r === 'admin' ? '관리자 권한(권한 코드 관리 포함)' : '학사일정·명단·배정표 수정과 참여 현황 기록'}을 할 수 있습니다.</p>
+    <div class="row" style="justify-content:center;gap:12px"><b class="num" id="codeShow" style="font-size:34px;letter-spacing:.18em">${code}</b><button class="btn" id="codeCopy">복사</button></div>
+    <p class="tiny muted" style="margin:0">권한은 학사일정 탭의 <b>권한 코드 관리</b>나 교사 명단에서 언제든 회수할 수 있습니다.</p>
+    <div class="mf"><button class="btn primary" onclick="closeModal()">확인</button></div>`);
+  document.getElementById('codeCopy').onclick = () => { try { navigator.clipboard.writeText(code).then(() => toast('코드를 복사했습니다.'), () => toast('코드를 직접 옮겨 적어 주세요.')); } catch(e){ toast('코드를 직접 옮겨 적어 주세요.'); } };
+}
+async function revokeCode(code){
+  if (!isSuper) return; const c = codes[code]; if (!c) return;
+  const admins = Object.values(codes).filter(x => x.role === 'admin').length;
+  if (c.role === 'admin' && admins <= 1){ toast('마지막 관리자 코드는 회수할 수 없습니다. 다른 관리자 코드를 먼저 만드세요.', true); return; }
+  const self = code === myCode;
+  if (!await ask('권한 회수', `${esc(c.name || '')} (${code})의 ${c.role === 'admin' ? '관리자' : '수정'} 권한을 회수합니다. 그 코드로 로그인한 화면은 바로 열람 전용이 됩니다.${self ? '<br><b>지금 쓰고 있는 내 코드입니다.</b>' : ''}`, '회수', true)) return;
+  try { await fdb.ref('access/' + code).remove(); toast('권한을 회수했습니다.'); } catch(e){ dbError(e); }
+}
+function codeOfTeacher(t){ return Object.keys(codes).find(k => codes[k].role === 'editor' && (codes[k].teacherId === t.id || (codes[k].name === t.name && codes[k].loc === t.loc))); }
+function codesPanelHTML(){
+  if (backend !== 'fb') return '';
+  if (!isSuper) return `<section class="panel"><div class="ph"><h2>권한 코드</h2></div><p class="muted small" style="margin:0">${role === 'editor' ? `<b>${esc(myName)}</b> 선생님의 수정 권한으로 로그인했습니다. 권한 코드 관리는 관리자만 할 수 있습니다.` : '수정 권한 코드는 관리자가 교사 명단에서 선생님별로 발급합니다.'}</p></section>`;
+  const list = Object.entries(codes).sort((a, b) => (a[1].role === 'admin' ? 0 : 1) - (b[1].role === 'admin' ? 0 : 1) || String(a[1].name).localeCompare(String(b[1].name), 'ko'));
+  return `<section class="panel"><div class="ph"><h2>권한 코드 관리 (${list.length}개)</h2></div>
+    <div class="tw" style="max-height:300px;overflow:auto"><table><thead><tr><th>코드</th><th class="l">이름</th><th>권한</th><th>발급일</th><th>관리</th></tr></thead><tbody>
+    ${list.map(([k, c]) => `<tr><td class="n"><b>${k}</b>${k === myCode ? ' <span class="tag t-ok">나</span>' : ''}</td><td class="l">${esc(c.name || '')}${c.loc ? ` <span class="tiny muted">${LOC_SHORT[c.loc] || ''}</span>` : ''}</td><td>${c.role === 'admin' ? '<span class="tag t-warn">관리자</span>' : '<span class="tag t-ok">수정</span>'}</td><td class="n small">${c.createdAt ? new Date(c.createdAt).toLocaleDateString('ko-KR') : ''}</td><td><button class="btn sm danger" onclick="revokeCode('${k}')">회수</button></td></tr>`).join('')}</tbody></table></div>
+    <div class="form-line" style="margin-top:10px"><label class="field"><span>관리자 코드 추가 (공동 관리자)</span><input type="text" id="admName" placeholder="예: 교무부장"></label><button class="btn" onclick="addAdminCode()">관리자 코드 만들기</button></div>
+    <p class="tiny muted" style="margin:6px 0 0">선생님별 수정 권한 코드는 <b>교사 명단</b> 표의 '수정 권한' 칸에서 발급합니다. 회수하면 그 코드로 로그인한 화면이 즉시 열람 전용으로 바뀝니다.</p></section>`;
+}
+
+let renderPending = false;
+function scheduleRender(){
+  const a = document.activeElement;
+  if (document.getElementById('ov')) { renderPending = true; return; }
+  if (a && a.closest && a.closest('#view') && /INPUT|SELECT|TEXTAREA/.test(a.tagName)){
+    if (!renderPending){ renderPending = true; a.addEventListener('blur', () => { renderPending = false; setTimeout(render, 0); }, {once:true}); }
+    return;
+  }
+  renderPending = false; render();
+}
+
+/* ---------- 공용 UI ---------- */
+function toast(msg, err){
+  const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
+  document.getElementById('toastRoot').appendChild(t); setTimeout(() => t.remove(), err ? 6000 : 3200);
+}
+function openModal(html, wide){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `<div class="ov" id="ov"><div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true">${html}</div></div>`;
+  document.getElementById('ov').addEventListener('mousedown', e => { if (e.target.id === 'ov') closeModal(); });
+  const f = root.querySelector('input:not([disabled]),select:not([disabled]),textarea,button.primary'); if (f) setTimeout(() => f.focus(), 30);
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML = ''; if (renderPending){ renderPending = false; render(); } }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('ov')) closeModal(); });
+function ask(title, body, okLabel = '확인', danger = false){
+  return new Promise(res => {
+    openModal(`<h3>${esc(title)}</h3><div class="muted">${body}</div><div class="mf"><button class="btn" id="askNo">취소</button><button class="btn ${danger ? 'danger solid' : 'primary'}" id="askYes">${esc(okLabel)}</button></div>`);
+    document.getElementById('askNo').onclick = () => { closeModal(); res(false); };
+    document.getElementById('askYes').onclick = () => { closeModal(); res(true); };
+  });
+}
+function needAdmin(){ if (!isAdmin){ toast('수정 권한이 필요합니다. 관리자에게 받은 코드로 로그인하세요.', true); return false; } return true; }
+
+async function saveFile(filename, data, type){
+  const blob = data instanceof Blob ? data : new Blob([data], {type});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function saveXlsx(filename, sheets){
+  if (typeof XLSX === 'undefined'){ toast('엑셀 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하세요.', true); return; }
+  const wb = XLSX.utils.book_new();
+  sheets.forEach(([name, rows, widths]) => { const ws = XLSX.utils.aoa_to_sheet(rows); if (widths) ws['!cols'] = widths.map(w => ({wch:w})); XLSX.utils.book_append_sheet(wb, ws, name); });
+  XLSX.writeFile(wb, filename);
+}
+
+/* ---------- 로그인 ---------- */
+document.getElementById('authBtn').onclick = () => {
+  if (role || (backend === 'local' && isAdmin)){ if (backend === 'fb') logout(); else { isAdmin = isSuper = false; updateMode(); render(); } return; }
+  if (backend === 'fb' && !authOk){ toast('Firebase 익명 로그인이 꺼져 있어 코드 로그인을 할 수 없습니다. 관리자에게 알려 주세요.', true); return; }
+  openModal(`<h3>코드로 로그인</h3><p class="muted small" style="margin:0">관리자에게 받은 <b>수정 권한 코드</b> 또는 <b>관리자 코드</b>를 입력하세요. 코드 없이도 모든 화면을 열람할 수 있습니다.</p>
+    <label class="field"><span>코드</span><input type="text" id="pinIn" maxlength="24" autocomplete="off" autocapitalize="characters" style="font-family:var(--f-mono);font-size:20px;letter-spacing:.12em;text-transform:uppercase"></label>
+    <p id="pinErr" class="small" style="margin:0;color:var(--bad)" hidden>등록되지 않았거나 회수된 코드입니다.</p>
+    <div class="mf"><button class="btn" onclick="closeModal()">취소</button><button class="btn primary" id="pinOk">로그인</button></div>`);
+  const goIn = async () => {
+    const code = cleanCode(document.getElementById('pinIn').value); if (!code) return;
+    if (backend !== 'fb'){ if (code === cleanCode((duty && duty.settings.pin) || '1954')){ isAdmin = isSuper = true; closeModal(); updateMode(); render(); } else document.getElementById('pinErr').hidden = false; return; }
+    try { if (await attachCode(code, false)){ closeModal(); toast('로그인했습니다.'); } else document.getElementById('pinErr').hidden = false; }
+    catch(e){ console.error(e); document.getElementById('pinErr').hidden = false; }
+  };
+  document.getElementById('pinOk').onclick = goIn;
+  document.getElementById('pinIn').onkeydown = e => { if (e.key === 'Enter') goIn(); };
+};
+function updateMode(){
+  const b = document.getElementById('modeBadge');
+  b.className = 'mode' + (isAdmin ? ' admin' : '');
+  b.textContent = isSuper ? `관리자${myName ? ' · ' + myName : ''}` : isAdmin ? `수정 권한 · ${myName}` : '열람 전용';
+  document.getElementById('authBtn').textContent = isAdmin ? '로그아웃' : '코드로 로그인';
+}
+
+/* ---------- 탭 ---------- */
+const TABS = ['home','calendar','report','duty','fairness'];
+document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) go(b.dataset.tab); });
+function go(tab){ ui.tab = tab; saveUi(); try { history.replaceState(null, '', '#' + tab); } catch(e){} render(); window.scrollTo(0, 0); }
+if (TABS.includes(location.hash.slice(1))) ui.tab = location.hash.slice(1);
+
+function render(){
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === ui.tab ? 'page' : 'false'));
+  const v = document.getElementById('view');
+  if (!loaded.duty){ return; }
+  if (duty){ const ymd = s => s.slice(2).replace(/-/g, '.'); document.getElementById('termLabel').textContent = `[${duty.settings.term || '학기'}] ${ymd(duty.settings.start)}~${ymd(duty.settings.end)}`; }
+  if (!duty){ v.innerHTML = emptyDutyHTML(); return; }
+  const fn = {home:renderHome, calendar:renderCalendar, report:renderReport, duty:renderDuty, fairness:renderFairness}[ui.tab] || renderHome;
+  v.innerHTML = fn();
+  afterRender();
+}
+function emptyDutyHTML(){
+  if (isSuper || (backend === 'local' && isAdmin)) return `<div class="panel empty"><h3>학사일정과 교사 명단을 불러오세요</h3>
+    <p>기본 명단(기숙사 26명 · 1,2자습실 20명 · 3학년 13명)과 2학기 휴업일 25건을 불러오고, 학기 전체 감독을 자동 배정합니다.</p>
+    <div class="row" style="justify-content:center;margin-top:12px"><button class="btn primary" onclick="loadDefaults()">기본 명단·일정 불러오기</button></div></div>`;
+  return `<div class="panel empty" style="max-width:640px;margin:0 auto"><h3>처음 설정 — 관리자 코드 만들기</h3>
+    <p>아직 데이터가 없습니다. 이 앱을 관리할 선생님이 쓸 <b>관리자 코드</b>를 정하세요. 영문 대문자·숫자 6~20자이며, 이후 로그인할 때 씁니다.<br>이미 관리자 코드가 있다면 오른쪽 위 <b>코드로 로그인</b>을 누르세요.</p>
+    <div class="row" style="justify-content:center;margin-top:12px;flex-wrap:nowrap;max-width:420px;margin-inline:auto"><input type="text" id="firstCode" placeholder="예: HSADMIN2026" style="font-family:var(--f-mono);text-transform:uppercase"><button class="btn primary" onclick="createFirstAdmin()">만들기</button></div></div>`;
+}
+async function createFirstAdmin(){
+  const code = cleanCode(document.getElementById('firstCode').value);
+  if (code.length < 6){ toast('영문·숫자 6자 이상으로 정하세요.', true); return; }
+  if (!authOk){ toast('Firebase 익명 로그인이 꺼져 있습니다. 설정 안내를 확인하세요.', true); return; }
+  try { await fdb.ref('access/' + code).set({role:'admin', name:'관리자', createdAt: Date.now(), by:'처음 설정'}); }
+  catch(e){
+    console.error(e);
+    const denied = String((e && (e.code || e.message)) || '').toLowerCase().includes('permission');
+    let exists = false; try { exists = (await fdb.ref('access/' + code).get()).exists(); } catch(_){}
+    if (exists) toast('이미 같은 코드가 있습니다. 오른쪽 위 코드로 로그인에 이 코드를 입력하세요.', true);
+    else if (denied) toast('Firebase가 저장을 거부했습니다. ① Realtime Database → 규칙에 최신 보안 규칙 파일을 붙여 넣고 게시했는지, ② 이미 다른 관리자 코드가 있는지 확인하세요.', true);
+    else toast('저장하지 못했습니다: ' + ((e && e.message) || '알 수 없는 오류'), true);
+    return;
+  }
+  try { await attachCode(code, false); } catch(e){ console.error(e); toast('코드는 만들었지만 로그인하지 못했습니다. 보안 규칙을 확인한 뒤 코드로 로그인을 눌러 주세요.', true); return; }
+  toast(`관리자 코드 ${code}를 만들었습니다. 잊지 않게 적어 두세요.`); render();
+}
+async function loadDefaults(){
+  if (!needAdmin()) return;
+  duty = defaultDuty(); duty.meta = {seed: 20260819, generatedAt: Date.now(), sig: sigOf(duty)};
+  duty.schedule = generateSchedule(duty, 'ALL', 20260819); saveDuty(); render(); toast('기본 명단과 학기 일정을 불러오고 배정을 완료했습니다.');
+}
+let afterRender = () => {};
+
+/* ---------- 공용 계산 ---------- */
+const schedMap = () => { const m = {}; duty.schedule.forEach(r => m[r.date] = r); return m; };
+function closedAll(ds){ return holidaysOn(duty, ds).some(h => h.locs.includes('ALL')); }
+function recTotals(r){
+  if (!r || r.reason) return null;
+  const g = k => r[k] || {};
+  const a1 = +g('g1').apply || 0, t1 = +g('g1').attend || 0, a2 = +g('g2').apply || 0, t2 = +g('g2').attend || 0;
+  const a3 = +g('g3').apply || 0, t3 = +g('g3').attend || 0;
+  return {a1, t1, a2, t2, a3, t3, A: a1 + a2 + a3, T: t1 + t2 + t3};
+}
+const pct = (t, a) => a ? (t / a * 100).toFixed(1) + '%' : '–';
+function weekLabel(mon){
+  const thu = pd(addD(mon, 3));
+  return `${thu.getMonth()+1}월 ${Math.floor((thu.getDate()-1)/7)+1}주차`;
+}
+function cellText(v, loc, r){
+  if (v === 'X') return '<span class="cell-x">–</span>';
+  if (v === '!') return '<span class="cell-none">가능 교사 없음</span>';
+  if (!v) return '<span class="cell-x">미지정</span>';
+  return esc(v) + (r && r.m && r.m[loc] ? '<span class="manual" title="직접 지정한 배정">지정</span>' : '');
+}
+
+/* ---------- 1. 오늘·이번 주 ---------- */
+function renderHome(){
+  const sm = schedMap(), r = sm[todayStr];
+  const mon = mondayOf(todayStr);
+  const tw = weekTotals(mon);
+  const S = computeStats(duty);
+  const dw = dowOf(todayStr);
+  const todayBox = (dw === 0 || dw === 6) && !r ? `<p class="muted">주말입니다. 주말·공휴일 특별 근무가 등록되면 여기에 표시됩니다.</p>`
+    : !r ? `<p class="muted">오늘은 배정표 운영 기간이 아닙니다.</p>`
+    : LOCS.map(l => `<div class="duty-line"><span class="loc ${l}">${LOC_NAME[l]}</span><strong>${cellText(r.c[l], l, r)}</strong></div>`).join('') + (r.note ? `<p class="small" style="margin:2px 0 0;color:var(--bad)">${esc(r.note)}</p>` : '');
+  const teacherOpts = LOCS.map(l => `<optgroup label="${LOC_NAME[l]}">${duty.teachers.filter(t => t.loc === l).slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(t => `<option value="${esc(l+'|'+t.name)}" ${ui.me === l+'|'+t.name ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</optgroup>`).join('');
+  let mine = '<p class="muted small" style="margin:0">이름을 고르면 남은 감독일이 나옵니다. 선택은 이 브라우저에만 기억됩니다.</p>';
+  if (ui.me && S.per[ui.me]){
+    const [l] = ui.me.split('|'); const p = S.per[ui.me];
+    const up = p.dates.filter(d => d >= todayStr), past = p.dates.length - up.length;
+    mine = `<div class="row small"><span class="loc ${l}">${LOC_NAME[l]}</span><span class="spacer"></span><span class="muted">지난 근무 <b class="num">${past}</b>회 · 남은 근무 <b class="num">${up.length}</b>회</span></div>
+      <div class="tw" style="max-height:230px;overflow:auto" id="mineList"><table><tbody>${p.dates.length ? p.dates.map(d => `<tr class="mine-row ${d < todayStr ? 'past' : ''} ${d === todayStr ? 'today' : ''}" ${d === up[0] ? 'id="mineNext"' : ''} onclick="jumpDay('${d}')" title="달력에서 보기"><td class="n l">${d}</td><td>${DOW[dowOf(d)]}요일</td><td class="l small muted">${d < todayStr ? '지난 근무' : esc(sm[d] && sm[d].note || '')}</td><td class="small" style="color:var(--accent)">달력 →</td></tr>`).join('') : '<tr><td class="muted">배정된 감독 일정이 없습니다.</td></tr>'}</tbody></table></div>
+      <p class="tiny muted" style="margin:6px 0 0">날짜를 누르면 통합 달력에서 그날을 보여줍니다.</p>`;
+  }
+  return `<div class="stack">
+    <div class="grid g-home">
+      <section class="panel"><div class="ph"><div><div class="eyebrow">오늘의 감독</div><h2>${md(todayStr)} (${DOW[dw]})</h2></div><button class="btn sm" onclick="openDay('${todayStr}')">${isAdmin ? '참여 현황 기록' : '오늘 현황 보기'}</button></div>
+        <div class="duty-today">${todayBox}</div></section>
+      <section class="panel"><div class="ph"><div><div class="eyebrow">내 감독 일정</div><h2>목록에서 선택</h2></div></div>
+        <select id="meSel" onchange="ui.me=this.value;saveUi();render()" style="margin-bottom:10px"><option value="">— 이름 선택 —</option>${teacherOpts}</select>${mine}</section>
+      <section class="panel"><div class="ph"><div><div class="eyebrow">이번 주 참여 현황</div><h2>${weekLabel(mon)} · ${md(mon)} ~ ${md(addD(mon,4))}</h2></div><button class="btn sm" onclick="ui.week='${mon}';go('report')">현황 보고 열기</button></div>
+        <div class="kpis">
+          <div class="kpi"><b>${tw.T}<small class="muted" style="font-size:14px"> / ${tw.A}</small></b><span>연인원 참여 / 신청</span></div>
+          <div class="kpi"><b>${pct(tw.T, tw.A)}</b><span>주간 참여율</span></div>
+          <div class="kpi"><b>${tw.filled}<small class="muted" style="font-size:14px"> / ${tw.open}</small></b><span>기록 입력일 / 운영일</span></div>
+        </div>
+        <div style="margin-top:14px">${weekChartSVG(mon, 170)}</div></section>
+    </div>
+    <section class="panel"><div class="ph"><h2>이번 주 감독·참여 현황</h2><span class="spacer"></span><button class="btn sm" onclick="if(needAdmin()){ui.week='${mon}';ui.reportEdit=true;go('report')}" ${dis()}>주간 현황 기록</button></div>${weekTableHTML(mon, false)}</section>
+    <section class="panel"><div class="ph"><h2>장소별 배정 균형</h2><span class="spacer"></span><button class="btn sm" onclick="go('fairness')">공정성 검증 자세히</button></div>${locSummaryTable(S)}</section>
+  </div>`;
+}
+
+/* ---------- 주간 표 ---------- */
+function weekTotals(mon){
+  let A=0, T=0, filled=0, open=0;
+  for (let i = 0; i < 5; i++){ const ds = addD(mon, i); const rec = study[ds]; if (closedAll(ds) || (rec && rec.reason)) continue; open++; const t = recTotals(rec); if (t){ filled++; A += t.A; T += t.T; } }
+  return {A, T, filled, open};
+}
+function weekTableHTML(mon, edit){
+  const sm = schedMap(); let sum = {a1:0,t1:0,a2:0,t2:0,ma:0,mt:0,fa:0,ft:0,a3:0,t3:0,A:0,T:0};
+  const rows = [];
+  for (let i = 0; i < 5; i++){
+    const ds = addD(mon, i), r = sm[ds], rec = study[ds], hol = holidaysOn(duty, ds).filter(h => h.locs.includes('ALL')).map(h => h.reason).join(', ');
+    const g3 = (rec && rec.g3) || {};
+    const dutyCells = LOCS.map(l => `<td>${r ? cellText(r.c[l], l, r) : '<span class="cell-x">–</span>'}</td>`).join('');
+    const dateCell = `<td class="n l" style="white-space:nowrap"><b>${md(ds)}</b> <span class="muted">(${DOW[i+1]})</span></td>`;
+    const cls = [(hol || (rec && rec.reason)) ? 'hol' : '', ds === todayStr ? 'today' : ''].join(' ');
+    if (edit){
+      const v = k => { const o = {g1a: rec?.g1?.apply, g1t: rec?.g1?.attend, g2a: rec?.g2?.apply, g2t: rec?.g2?.attend, ma: g3.m_apply, mt: g3.m_attend, fa: g3.f_apply, ft: g3.f_attend}[k]; return (rec && !rec.reason && o !== undefined && o !== null && o !== '') ? o : ''; };
+      const inp = k => `<td><input class="cell-input" type="number" min="0" id="wk-${i}-${k}" value="${v(k)}" oninput="wkSum(${i})" aria-label="${md(ds)} ${k}"></td>`;
+      rows.push(`<tr class="${cls}">${dateCell}${dutyCells}${['g1a','g1t','g2a','g2t','ma','mt','fa','ft'].map(inp).join('')}<td class="n" id="wk-${i}-s3">–</td><td class="n" id="wk-${i}-st">–</td><td class="l"><input type="text" id="wk-${i}-reason" value="${esc(rec && rec.reason || '')}" placeholder="${esc(hol ? '휴업: ' + hol : '휴업·행사 사유 (있을 때만)')}" style="min-width:150px"></td></tr>`);
+      continue;
     }
+    const reason = (rec && rec.reason) || hol;
+    const t = recTotals(rec);
+    if (reason && !t){ rows.push(`<tr class="${cls}">${dateCell}${dutyCells}<td colspan="12" class="l" style="color:var(--bad);font-weight:600">${esc(reason)}</td><td class="l small"></td></tr>`); continue; }
+    if (!t){ rows.push(`<tr class="${cls}">${dateCell}${dutyCells}<td colspan="12" class="muted small">${ds <= todayStr ? '아직 기록이 없습니다' : '예정'}</td><td></td></tr>`); continue; }
+    const hasMF = g3.m_apply !== undefined;
+    const vals = [t.a1, t.t1, t.a2, t.t2, hasMF ? +g3.m_apply||0 : '–', hasMF ? +g3.m_attend||0 : '–', hasMF ? +g3.f_apply||0 : '–', hasMF ? +g3.f_attend||0 : '–'];
+    sum.a1+=t.a1; sum.t1+=t.t1; sum.a2+=t.a2; sum.t2+=t.t2; sum.a3+=t.a3; sum.t3+=t.t3; sum.A+=t.A; sum.T+=t.T;
+    if (hasMF){ sum.ma+=+g3.m_apply||0; sum.mt+=+g3.m_attend||0; sum.fa+=+g3.f_apply||0; sum.ft+=+g3.f_attend||0; }
+    rows.push(`<tr class="${cls}">${dateCell}${dutyCells}${vals.map(x => `<td class="n">${x}</td>`).join('')}<td class="n">${t.t3}/${t.a3}</td><td class="n"><b>${t.T}</b>/${t.A} <span class="muted small">${pct(t.T, t.A)}</span></td><td class="l small" style="color:var(--bad)">${esc(reason || '')}</td></tr>`);
+  }
+  const foot = edit ? '' : `<tfoot><tr><td class="l">주간 합계</td><td colspan="3"></td>${[sum.a1,sum.t1,sum.a2,sum.t2,sum.ma,sum.mt,sum.fa,sum.ft].map(x => `<td class="n">${x}</td>`).join('')}<td class="n">${sum.t3}/${sum.a3}</td><td class="n">${sum.T}/${sum.A} <span class="small">${pct(sum.T, sum.A)}</span></td><td></td></tr></tfoot>`;
+  return `<div class="tw"><table>
+    <thead><tr><th rowspan="2" class="l">날짜</th><th colspan="3">감독 교사</th><th colspan="2" class="gr g1">1학년</th><th colspan="2" class="gr g2">2학년</th><th colspan="2" class="gr g3">3학년 남</th><th colspan="2" class="gr g3">3학년 여</th><th class="gr g3">3학년 계</th><th>합계</th><th rowspan="2" class="l">특이사항</th></tr>
+    <tr><th><span class="loc DORM">기숙사</span></th><th><span class="loc STUDY_12">1·2자습실</span></th><th><span class="loc STUDY_3">3학년실</span></th><th>신청</th><th>참여</th><th>신청</th><th>참여</th><th>신청</th><th>참여</th><th>신청</th><th>참여</th><th>참여/신청</th><th>참여/신청</th></tr></thead>
+    <tbody>${rows.join('')}</tbody>${foot}</table></div>`;
+}
+function wkSum(i){
+  const g = k => parseInt(document.getElementById(`wk-${i}-${k}`).value) || 0;
+  const a3 = g('ma') + g('fa'), t3 = g('mt') + g('ft');
+  document.getElementById(`wk-${i}-s3`).textContent = `${t3}/${a3}`;
+  document.getElementById(`wk-${i}-st`).textContent = `${g('g1t')+g('g2t')+t3}/${g('g1a')+g('g2a')+a3}`;
+  [['g1a','g1t'],['g2a','g2t'],['ma','mt'],['fa','ft']].forEach(([a, t]) => document.getElementById(`wk-${i}-${t}`).classList.toggle('warn', g(t) > g(a)));
+}
+function mkRec(v){
+  if (v.reason) return {reason: v.reason, updatedAt: Date.now()};
+  return {reason:'', g1:{apply:v.g1a, attend:v.g1t}, g2:{apply:v.g2a, attend:v.g2t},
+    g3:{m_apply:v.ma, m_attend:v.mt, f_apply:v.fa, f_attend:v.ft, apply:v.ma + v.fa, attend:v.mt + v.ft}, updatedAt: Date.now()};
+}
+async function saveWeek(){
+  const mon = ui.week; let n = 0, ok = true;
+  for (let i = 0; i < 5; i++){
+    const ds = addD(mon, i); const raw = {}; let any = false;
+    ['g1a','g1t','g2a','g2t','ma','mt','fa','ft'].forEach(k => { const s = document.getElementById(`wk-${i}-${k}`).value; if (s !== '') any = true; raw[k] = parseInt(s) || 0; });
+    raw.reason = document.getElementById(`wk-${i}-reason`).value.trim();
+    if (!any && !raw.reason){ if (study[ds]){ if (!(await saveStudy(ds, null))) ok = false; } continue; }
+    if (!(await saveStudy(ds, mkRec(raw)))) ok = false; n++;
+  }
+  ui.reportEdit = false; render(); if (ok) toast(`${weekLabel(mon)} 기록 ${n}일을 저장했습니다.`);
+}
 
-    // 학년별 색상 반영 달력 이벤트 등록 (1학년: 노랑, 2학년: 초록, 3학년: 파랑)
-    function getCalendarEvents() {
-      const events = [];
-      Object.keys(dbData).forEach(date => {
-        const item = dbData[date];
-        if (item.reason) {
-          events.push({
-            title: `[사유] ${item.reason}`,
-            start: date,
-            classNames: ['event-reason'],
-            allDay: true
-          });
-        } else {
-          if (item.g1 && (item.g1.apply > 0 || item.g1.attend > 0)) {
-            events.push({
-              title: `1학년: ${item.g1.attend}/${item.g1.apply}`,
-              start: date,
-              classNames: ['event-g1'],
-              allDay: true
-            });
-          }
-          if (item.g2 && (item.g2.apply > 0 || item.g2.attend > 0)) {
-            events.push({
-              title: `2학년: ${item.g2.attend}/${item.g2.apply}`,
-              start: date,
-              classNames: ['event-g2'],
-              allDay: true
-            });
-          }
-          if (item.g3 && (item.g3.apply > 0 || item.g3.attend > 0)) {
-            events.push({
-              title: `3학년: ${item.g3.attend}/${item.g3.apply}`,
-              start: date,
-              classNames: ['event-g3'],
-              allDay: true
-            });
-          }
-        }
-      });
-      return events;
-    }
-
-    function goToToday() {
-      if (calendar) calendar.today();
-    }
-
-    // --- 탭 전환 및 관리자 인증 ---
-    function switchTab(tab) {
-      if (tab === 'teacher') {
-        document.getElementById('teacherView').style.display = 'block';
-        document.getElementById('adminView').style.display = 'none';
-        document.getElementById('btnTeacherTab').classList.add('active');
-        document.getElementById('btnAdminTab').classList.remove('active');
-        isAdmin = false;
-        setTimeout(() => calendar.render(), 100);
-      } else if (tab === 'admin') {
-        document.getElementById('teacherView').style.display = 'none';
-        document.getElementById('adminView').style.display = 'block';
-        document.getElementById('btnTeacherTab').classList.remove('active');
-        document.getElementById('btnAdminTab').classList.add('active');
-        isAdmin = true;
-        renderAdminTable();
-      }
-    }
-
-    function openAdminAuthModal() {
-      if (isAdmin) {
-        switchTab('admin');
-        return;
-      }
-      const modal = new bootstrap.Modal(document.getElementById('adminAuthModal'));
-      document.getElementById('adminPinInput').value = '';
-      modal.show();
-    }
-
-    function verifyAdminPin() {
-      const pin = document.getElementById('adminPinInput').value;
-      if (pin === '1954') {
-        bootstrap.Modal.getInstance(document.getElementById('adminAuthModal')).hide();
-        switchTab('admin');
-      } else {
-        alert('관리자 비밀번호가 일치하지 않습니다. (힌트: 1954)');
-      }
-    }
-
-    // --- 현황 입력 모달 및 주간 입력 ---
-    function setMode(mode) {
-      currentInputMode = mode;
-      if (mode === 'weekly') {
-        generateWeeklyForm();
-      }
-    }
-
-    function setMondayForWeekly(d) {
-      const date = new Date(d);
-      const day = date.getDay();
-      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-      const monday = new Date(date.setDate(diff));
-      document.getElementById('weeklyStartDate').value = monday.toISOString().split('T')[0];
-    }
-
-    function openDataModal(dateStr = '') {
-      const modal = new bootstrap.Modal(document.getElementById('dataInputModal'));
-      const targetDate = dateStr || new Date().toISOString().split('T')[0];
-      document.getElementById('inputDate').value = targetDate;
-      setMondayForWeekly(new Date(targetDate));
-
-      if (dbData[targetDate]) {
-        const d = dbData[targetDate];
-        document.getElementById('inputReason').value = d.reason || '';
-        document.getElementById('g1_apply').value = d.g1?.apply || '';
-        document.getElementById('g1_attend').value = d.g1?.attend || '';
-        document.getElementById('g2_apply').value = d.g2?.apply || '';
-        document.getElementById('g2_attend').value = d.g2?.attend || '';
-        document.getElementById('g3_m_apply').value = d.g3?.m_apply || '';
-        document.getElementById('g3_m_attend').value = d.g3?.m_attend || '';
-        document.getElementById('g3_f_apply').value = d.g3?.f_apply || '';
-        document.getElementById('g3_f_attend').value = d.g3?.f_attend || '';
-        calcG3Total();
-      } else {
-        document.getElementById('studyDataFormDaily').reset();
-        document.getElementById('inputDate').value = targetDate;
-      }
-      modal.show();
-    }
-
-    function generateWeeklyForm() {
-      const startStr = document.getElementById('weeklyStartDate').value;
-      if (!startStr) return;
-      const startDate = new Date(startStr);
-      const container = document.getElementById('weeklyFormContainer');
-      container.innerHTML = '';
-
-      const dayNames = ['월요일', '화요일', '수요일', '목요일', '금요일'];
-
-      for (let i = 0; i < 5; i++) {
-        const curr = new Date(startDate);
-        curr.setDate(startDate.getDate() + i);
-        const currStr = curr.toISOString().split('T')[0];
-        const existing = dbData[currStr] || {};
-
-        const dayBox = document.createElement('div');
-        dayBox.className = 'weekly-day-box border';
-        dayBox.innerHTML = `
-          <h6 class="fw-bold text-dark mb-2"><i class="fa-regular fa-calendar-check me-1"></i> ${currStr} (${dayNames[i]})</h6>
-          <div class="row g-2 mb-2">
-            <div class="col-md-12">
-              <input type="text" class="form-control form-control-sm" id="wk_reason_${i}" placeholder="특이사항 사유 (선택)" value="${existing.reason || ''}">
-            </div>
-          </div>
-          <div class="row g-2 text-center align-middle">
-            <div class="col-4">
-              <span class="badge bg-warning text-dark w-100 py-1 mb-1">1학년</span>
-              <input type="number" class="form-control form-control-sm mb-1" id="wk_g1_app_${i}" placeholder="신청" value="${existing.g1?.apply || ''}">
-              <input type="number" class="form-control form-control-sm" id="wk_g1_att_${i}" placeholder="참여" value="${existing.g1?.attend || ''}">
-            </div>
-            <div class="col-4">
-              <span class="badge bg-success w-100 py-1 mb-1">2학년</span>
-              <input type="number" class="form-control form-control-sm mb-1" id="wk_g2_app_${i}" placeholder="신청" value="${existing.g2?.apply || ''}">
-              <input type="number" class="form-control form-control-sm" id="wk_g2_att_${i}" placeholder="참여" value="${existing.g2?.attend || ''}">
-            </div>
-            <div class="col-4">
-              <span class="badge bg-primary w-100 py-1 mb-1">3학년(총합)</span>
-              <input type="number" class="form-control form-control-sm mb-1" id="wk_g3_app_${i}" placeholder="신청" value="${existing.g3?.apply || ''}">
-              <input type="number" class="form-control form-control-sm" id="wk_g3_att_${i}" placeholder="참여" value="${existing.g3?.attend || ''}">
-            </div>
-          </div>
-        `;
-        container.appendChild(dayBox);
-      }
-    }
-
-    function calcG3Total() {
-      const mApp = parseInt(document.getElementById('g3_m_apply').value) || 0;
-      const mAtt = parseInt(document.getElementById('g3_m_attend').value) || 0;
-      const fApp = parseInt(document.getElementById('g3_f_apply').value) || 0;
-      const fAtt = parseInt(document.getElementById('g3_f_attend').value) || 0;
-
-      document.getElementById('g3_apply').value = mApp + fApp;
-      document.getElementById('g3_attend').value = mAtt + fAtt;
-    }
-
-    // 일일 데이터 저장
-    document.getElementById('studyDataFormDaily').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const date = document.getElementById('inputDate').value;
-      const reason = document.getElementById('inputReason').value.trim();
-
-      if (reason) {
-        dbData[date] = { reason: reason };
-      } else {
-        dbData[date] = {
-          reason: '',
-          g1: {
-            apply: parseInt(document.getElementById('g1_apply').value) || 0,
-            attend: parseInt(document.getElementById('g1_attend').value) || 0
-          },
-          g2: {
-            apply: parseInt(document.getElementById('g2_apply').value) || 0,
-            attend: parseInt(document.getElementById('g2_attend').value) || 0
-          },
-          g3: {
-            m_apply: parseInt(document.getElementById('g3_m_apply').value) || 0,
-            m_attend: parseInt(document.getElementById('g3_m_attend').value) || 0,
-            f_apply: parseInt(document.getElementById('g3_f_apply').value) || 0,
-            f_attend: parseInt(document.getElementById('g3_f_attend').value) || 0,
-            apply: parseInt(document.getElementById('g3_apply').value) || 0,
-            attend: parseInt(document.getElementById('g3_attend').value) || 0
-          }
-        };
-      }
-
-      saveAndRefresh();
-      bootstrap.Modal.getInstance(document.getElementById('dataInputModal')).hide();
+function weekChartSVG(mon, h = 220){
+  const W = 760, H = h, padL = 34, padB = 24, padT = 8;
+  const days = [0,1,2,3,4].map(i => { const ds = addD(mon, i); return {ds, t: recTotals(study[ds])}; });
+  const mx = Math.max(10, ...days.flatMap(d => d.t ? [d.t.a1, d.t.a2, d.t.a3] : [0]));
+  const nice = Math.ceil(mx / 10) * 10, y = v => padT + (H - padT - padB) * (1 - v / nice);
+  const gw = (W - padL) / 5, bw = Math.min(26, gw / 4.2);
+  let g = '<g class="grid">'; for (let k = 0; k <= 4; k++){ const v = nice * k / 4; g += `<line x1="${padL}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text x="${padL-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`; } g += '</g>';
+  let bars = '', pts = {1:[], 2:[], 3:[]};
+  days.forEach((d, i) => {
+    const cx = padL + gw * i + gw / 2;
+    bars += `<text x="${cx}" y="${H-6}" text-anchor="middle">${md(d.ds)} ${DOW[i+1]}</text>`;
+    if (!d.t){ bars += `<text x="${cx}" y="${y(nice/2)}" text-anchor="middle" style="fill:var(--ink-3);font-size:11px">${esc((study[d.ds] && study[d.ds].reason) || (closedAll(d.ds) ? '휴업' : '기록 없음'))}</text>`; [1,2,3].forEach(k => pts[k].push(null)); return; }
+    [[d.t.a1, d.t.t1, 1], [d.t.a2, d.t.t2, 2], [d.t.a3, d.t.t3, 3]].forEach(([a, t, k], j) => {
+      const x = cx + (j - 1.5) * (bw + 4) + 2;
+      bars += `<rect class="b${k}" x="${x}" y="${y(a)}" width="${bw}" height="${Math.max(0, y(0)-y(a))}" rx="2"><title>${k}학년 신청 ${a}명</title></rect>`;
+      pts[k].push({x: x + bw / 2, y: y(t), t, a});
     });
+  });
+  let lines = '';
+  [1,2,3].forEach(k => {
+    let seg = [];
+    const flush = () => { if (seg.length > 1) lines += `<polyline class="ln ln${k}" points="${seg.map(p => p.x + ',' + p.y).join(' ')}"/>`; seg = []; };
+    pts[k].forEach(p => { if (p) seg.push(p); else flush(); }); flush();
+    pts[k].forEach(p => { if (p) lines += `<circle class="pt pt${k}" cx="${p.x}" cy="${p.y}" r="4"><title>${k}학년 참여 ${p.t}명 / 신청 ${p.a}명</title></circle>` + (h >= 200 ? `<text class="vl" x="${p.x}" y="${p.y - 8}" text-anchor="middle">${p.t}</text>` : ''); });
+  });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="요일별 학년 신청(막대)·참여(꺾은선) 인원">${g}${bars}${lines}</svg>
+    <div class="legend"><span><i style="background:var(--g1)"></i>1학년</span><span><i style="background:var(--g2)"></i>2학년</span><span><i style="background:var(--g3)"></i>3학년</span><span class="muted">막대 = 신청 인원, 꺾은선 = 참여 인원</span></div>`;
+}
 
-    // 주간 데이터 저장
-    document.getElementById('studyDataFormWeekly').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const startStr = document.getElementById('weeklyStartDate').value;
-      const startDate = new Date(startStr);
-
-      for (let i = 0; i < 5; i++) {
-        const curr = new Date(startDate);
-        curr.setDate(startDate.getDate() + i);
-        const currStr = curr.toISOString().split('T')[0];
-
-        const reason = document.getElementById(`wk_reason_${i}`).value.trim();
-        if (reason) {
-          dbData[currStr] = { reason: reason };
-        } else {
-          const g1App = parseInt(document.getElementById(`wk_g1_app_${i}`).value) || 0;
-          const g1Att = parseInt(document.getElementById(`wk_g1_att_${i}`).value) || 0;
-          const g2App = parseInt(document.getElementById(`wk_g2_app_${i}`).value) || 0;
-          const g2Att = parseInt(document.getElementById(`wk_g2_att_${i}`).value) || 0;
-          const g3App = parseInt(document.getElementById(`wk_g3_app_${i}`).value) || 0;
-          const g3Att = parseInt(document.getElementById(`wk_g3_att_${i}`).value) || 0;
-
-          if (g1App || g1Att || g2App || g2Att || g3App || g3Att) {
-            dbData[currStr] = {
-              reason: '',
-              g1: { apply: g1App, attend: g1Att },
-              g2: { apply: g2App, attend: g2Att },
-              g3: { apply: g3App, attend: g3Att }
-            };
-          }
-        }
-      }
-
-      saveAndRefresh();
-      bootstrap.Modal.getInstance(document.getElementById('dataInputModal')).hide();
-      alert("주간 데이터가 일괄 저장되었습니다.");
+/* ---------- 2. 통합 달력 ---------- */
+function renderCalendar(){
+  const [Y, M] = ui.month.split('-').map(Number);
+  const first = new Date(Y, M-1, 1), sm = schedMap();
+  let start = mondayOf(fd(first));
+  const last = new Date(Y, M, 0);
+  const cells = [];
+  for (let ds = start; ; ds = addD(ds, 1)){
+    const d = pd(ds); const w = d.getDay();
+    if (d > last && w === 1) break;
+    const r = sm[ds], rec = study[ds], hols = holidaysOn(duty, ds), t = recTotals(rec);
+    const allHol = hols.some(h => h.locs.includes('ALL'));
+    const cls = ['day', d.getMonth() !== M-1 ? 'other' : '', w === 6 ? 'sat we' : '', w === 0 ? 'sun we' : '', allHol ? 'hol' : hols.length ? 'phol' : '', ds === todayStr ? 'today' : '', ds === ui.focus ? 'focus' : ''].join(' ');
+    let inner = `<span class="dn">${d.getDate()}</span>`;
+    hols.forEach(h => inner += `<span class="hr">${h.locs.includes('ALL') ? '전체 제외 · ' : ''}${esc(h.reason)}</span>`);
+    if (r) LOCS.forEach(l => {
+      const v = r.c[l];
+      if (v === 'X'){ if (!allHol && !r.wk && isLocHoliday(duty, ds, l)) inner += `<span class="dl"><i class="${l}">${LOC_SHORT[l]}</i><span class="ex">근무 제외</span></span>`; return; }
+      inner += `<span class="dl"><i class="${l}">${LOC_SHORT[l]}</i><span>${v === '!' ? '<span class="cell-none">없음</span>' : esc(v || '미지정')}${r.sp && r.sp[l] ? ' <span class="tag t-warn" style="padding:0 4px">특별</span>' : ''}</span></span>`;
     });
+    else if (!allHol && w > 0 && w < 6 && hols.length) LOCS.forEach(l => { if (isLocHoliday(duty, ds, l)) inner += `<span class="dl"><i class="${l}">${LOC_SHORT[l]}</i><span class="ex">근무 제외</span></span>`; });
+    inner += `<span class="st">${t ? `<span class="pill g1">1 ${t.t1}/${t.a1}</span><span class="pill g2">2 ${t.t2}/${t.a2}</span><span class="pill g3">3 ${t.t3}/${t.a3}</span>` : rec && rec.reason ? `<span class="pill rs">${esc(rec.reason)}</span>` : ''}</span>`;
+    cells.push(`<button type="button" class="${cls}" onclick="openDay('${ds}')" aria-label="${ds} 상세">${inner}</button>`);
+  }
+  const heads = ['월','화','수','목','금','토','일'].map((x, i) => `<div class="hd ${i===5?'sat':''} ${i===6?'sun':''}">${x}</div>`).join('');
+  return `<section class="panel">
+    <div class="ph"><div class="row"><button class="btn sm" onclick="moveMonth(-1)" aria-label="이전 달">◀</button><h2 class="num" style="min-width:120px;text-align:center">${Y}년 ${M}월</h2><button class="btn sm" onclick="moveMonth(1)" aria-label="다음 달">▶</button><button class="btn sm ghost" onclick="ui.month='${todayStr.slice(0,7)}';saveUi();render()">이번 달</button></div>
+      <div class="legend"><span><i style="background:var(--hol);outline:1px solid var(--bad)"></i>근무 제외일</span><span><i style="background:var(--l1)"></i>기숙사</span><span><i style="background:var(--l2)"></i>1·2자습실</span><span><i style="background:var(--l3)"></i>3학년실</span><span>·</span><span><i style="background:var(--g1)"></i>1학년 참여/신청</span><span><i style="background:var(--g2)"></i>2학년</span><span><i style="background:var(--g3)"></i>3학년</span></div></div>
+    <p class="small muted" style="margin:-6px 0 12px">날짜를 누르면 그날의 감독 교사를 확인하고 참여 현황을 기록할 수 있습니다.</p>
+    <div style="overflow-x:auto"><div class="cal">${heads}${cells.join('')}</div></div></section>`;
+}
+function jumpDay(ds){ ui.month = ds.slice(0, 7); ui.focus = ds; go('calendar'); }
+function moveMonth(n){ ui.focus = ''; const [Y, M] = ui.month.split('-').map(Number); const d = new Date(Y, M-1+n, 1); ui.month = fd(d).slice(0,7); saveUi(); render(); }
 
-    // --- 관리자 기능 ---
-    function setScheduleReason(val) {
-      if(val) document.getElementById('scheduleReason').value = val;
-    }
+function openDay(ds){
+  const r = schedMap()[ds], rec = study[ds], hols = holidaysOn(duty, ds);
+  const g3 = (rec && rec.g3) || {}, val = (o, k) => (rec && !rec.reason && o && o[k] !== undefined) ? o[k] : '';
+  const w = dowOf(ds);
+  const dutyHTML = r ? LOCS.map(l => `<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line-2);padding:5px 0"><span class="loc ${l}">${LOC_NAME[l]}</span><b>${cellText(r.c[l], l, r)}</b></div>`).join('') : '<p class="muted small" style="margin:0">이 날짜에는 감독 배정이 없습니다.</p>';
+  const num = (id, v) => `<input type="number" min="0" id="${id}" value="${v}" oninput="daySum()" placeholder="0" ${dis()}>`;
+  openModal(`<div class="row"><h3>${ds} (${DOW[w]})</h3><span class="spacer"></span>${hols.map(h => `<span class="tag t-bad">${esc(h.reason)}</span>`).join('')}</div>
+    <div class="box"><h4>감독 교사</h4>${dutyHTML}</div>
+    <div class="box"><h4>자기주도학습 참여 현황</h4>
+      <label class="field"><span>휴업·행사 사유 (적으면 인원 대신 사유만 저장)</span><input type="text" id="dReason" ${dis()} value="${esc(rec && rec.reason || '')}" placeholder="예: 전국연합학력평가, 체험학습"></label>
+      <div class="g-grade"><span></span><span class="small muted">신청 (명)</span><span class="small muted">참여 (명)</span>
+        <b class="gr g1">1학년</b>${num('d_g1a', val(rec && rec.g1, 'apply'))}${num('d_g1t', val(rec && rec.g1, 'attend'))}
+        <b class="gr g2">2학년</b>${num('d_g2a', val(rec && rec.g2, 'apply'))}${num('d_g2t', val(rec && rec.g2, 'attend'))}
+        <b class="gr g3">3학년 남</b>${num('d_ma', val(g3, 'm_apply'))}${num('d_mt', val(g3, 'm_attend'))}
+        <b class="gr g3">3학년 여</b>${num('d_fa', val(g3, 'f_apply'))}${num('d_ft', val(g3, 'f_attend'))}
+        <b>3학년 합계</b><span class="num" id="d_s3a">0</span><span class="num" id="d_s3t">0</span></div>
+      ${rec && rec.updatedAt ? `<p class="tiny muted" style="margin:0">마지막 저장: ${new Date(rec.updatedAt).toLocaleString('ko-KR')}</p>` : ''}</div>
+    <div class="mf">${rec ? `<button class="btn danger" onclick="delDay('${ds}')" ${dis()} title="${isAdmin ? '' : '수정 권한이 있어야 삭제할 수 있습니다'}">기록 삭제</button><span class="spacer"></span>` : ''}<button class="btn" onclick="closeModal()">닫기</button><button class="btn primary" onclick="saveDay('${ds}')" ${dis()}>저장</button></div>${isAdmin ? '' : '<p class="tiny muted" style="margin:0;text-align:right">참여 현황 기록은 수정 권한 코드로 로그인한 선생님만 할 수 있습니다.</p>'}`);
+  daySum();
+}
+function daySum(){
+  const g = id => parseInt(document.getElementById(id).value) || 0;
+  document.getElementById('d_s3a').textContent = g('d_ma') + g('d_fa');
+  document.getElementById('d_s3t').textContent = g('d_mt') + g('d_ft');
+}
+async function saveDay(ds){
+  const g = id => parseInt(document.getElementById(id).value) || 0;
+  const v = {reason: document.getElementById('dReason').value.trim(), g1a:g('d_g1a'), g1t:g('d_g1t'), g2a:g('d_g2a'), g2t:g('d_g2t'), ma:g('d_ma'), mt:g('d_mt'), fa:g('d_fa'), ft:g('d_ft')};
+  closeModal(); if (await saveStudy(ds, mkRec(v))) toast(`${ds} 현황을 저장했습니다.`); render();
+}
+async function delDay(ds){ if (!needAdmin()) return; closeModal(); if (await ask('기록 삭제', `${ds} 참여 기록을 지웁니다. 되돌릴 수 없습니다.`, '삭제', true)){ await saveStudy(ds, null); render(); toast('삭제했습니다.'); } }
 
-    document.getElementById('adminScheduleForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const date = document.getElementById('scheduleDate').value;
-      const reason = document.getElementById('scheduleReason').value;
+/* ---------- 3. 참여 현황 보고 ---------- */
+function weekReportText(mon){
+  const sm = schedMap(); const lines = []; let A=[0,0,0], T=[0,0,0], M=[0,0,0,0], days = 0, mf = false; const closed = [];
+  for (let i = 0; i < 5; i++){
+    const ds = addD(mon, i), rec = study[ds], t = recTotals(rec);
+    const hol = holidaysOn(duty, ds).filter(h => h.locs.includes('ALL')).map(h => h.reason).join(', ');
+    if (!t){ if (hol || (rec && rec.reason)) closed.push(`${md(ds)} ${(rec && rec.reason) || hol}`); continue; }
+    days++; A[0]+=t.a1; A[1]+=t.a2; A[2]+=t.a3; T[0]+=t.t1; T[1]+=t.t2; T[2]+=t.t3;
+    if (rec.g3 && rec.g3.m_apply !== undefined){ mf = true; M[0]+=+rec.g3.m_apply||0; M[1]+=+rec.g3.m_attend||0; M[2]+=+rec.g3.f_apply||0; M[3]+=+rec.g3.f_attend||0; }
+  }
+  const SA = A[0]+A[1]+A[2], ST = T[0]+T[1]+T[2];
+  lines.push(`[자기주도학습 주간 보고] ${weekLabel(mon)} (${md(mon)} ~ ${md(addD(mon,4))})`);
+  lines.push(`· 기록된 운영일: ${days}일` + (closed.length ? ` / 미운영: ${closed.join(', ')}` : ''));
+  ['1학년','2학년','3학년'].forEach((g, k) => lines.push(`· ${g}: 신청 연 ${A[k]}명, 참여 연 ${T[k]}명 (참여율 ${pct(T[k], A[k])})` + (k === 2 && mf ? ` — 남 ${M[1]}/${M[0]}, 여 ${M[3]}/${M[2]}` : '')));
+  lines.push(`· 전체: 신청 연 ${SA}명, 참여 연 ${ST}명 (참여율 ${pct(ST, SA)})` + (days ? `, 일평균 참여 ${(ST/days).toFixed(1)}명` : ''));
+  const names = {}; LOCS.forEach(l => names[l] = []);
+  for (let i = 0; i < 5; i++){ const r = sm[addD(mon, i)]; if (r) LOCS.forEach(l => { if (isName(r.c[l])) names[l].push(`${DOW[i+1]} ${r.c[l]}`); }); }
+  lines.push('· 감독: ' + LOCS.map(l => `${LOC_SHORT[l]}(${names[l].join(', ') || '없음'})`).join(' / '));
+  return lines.join('\n');
+}
+function weekReportData(mon){
+  const sm = schedMap(); const days = []; let A=[0,0,0], T=[0,0,0], M=[0,0,0,0], open = 0, mf = false;
+  for (let i = 0; i < 5; i++){
+    const ds = addD(mon, i), r = sm[ds], rec = study[ds], t = recTotals(rec);
+    const duty_ = {}; LOCS.forEach(l => { const v = r ? r.c[l] : 'X'; duty_[l] = isName(v) ? v : v === '!' ? '가능 교사 없음' : (isLocHoliday(duty, ds, l) ? '근무 제외' : '–'); });
+    const reason = (rec && rec.reason) || holidaysOn(duty, ds).filter(h => h.locs.includes('ALL')).map(h => h.reason).join(', ');
+    days.push({ds, duty: duty_, t, reason});
+    if (t){ open++; A[0]+=t.a1; A[1]+=t.a2; A[2]+=t.a3; T[0]+=t.t1; T[1]+=t.t2; T[2]+=t.t3;
+      if (rec.g3 && rec.g3.m_apply !== undefined){ mf = true; M[0]+=+rec.g3.m_apply||0; M[1]+=+rec.g3.m_attend||0; M[2]+=+rec.g3.f_apply||0; M[3]+=+rec.g3.f_attend||0; } }
+  }
+  const grades = [['1학년', A[0], T[0]], ['2학년', A[1], T[1]]];
+  if (mf){ grades.push(['3학년 남', M[0], M[1]], ['3학년 여', M[2], M[3]]); }
+  grades.push(['3학년 계', A[2], T[2]], ['전체', A[0]+A[1]+A[2], T[0]+T[1]+T[2]]);
+  return {days, grades, open};
+}
+function weekReportTables(mon){
+  const D = weekReportData(mon), b = 'border="1" cellspacing="0" cellpadding="4"';
+  const dayHead = D.days.map((d, i) => `<th>${DOW[i+1]} (${md(d.ds)})</th>`).join('');
+  const dutyRows = LOCS.map(l => `<tr><th class="l">${LOC_NAME[l]}</th>${D.days.map(d => `<td style="${d.duty[l] === '근무 제외' || d.duty[l] === '–' ? 'color:var(--ink-3)' : ''}">${esc(d.duty[l])}</td>`).join('')}</tr>`).join('');
+  const partRow = (label, f) => `<tr><th class="l">${label}</th>${D.days.map(d => `<td class="n">${d.t ? f(d.t) : `<span style="color:var(--bad)">${esc(d.reason || '–')}</span>`}</td>`).join('')}</tr>`;
+  const gradeRows = D.grades.map(([g, a, t]) => `<tr${g === '전체' ? ' style="font-weight:700"' : ''}><th class="l">${g}</th><td class="n">${a}</td><td class="n">${t}</td><td class="n">${pct(t, a)}</td><td class="n">${D.open ? (t / D.open).toFixed(1) : '–'}</td></tr>`).join('');
+  return `<table ${b}><caption>${weekLabel(mon)} (${md(mon)} ~ ${md(addD(mon,4))}) 감독 현황</caption><thead><tr><th class="l">장소</th>${dayHead}</tr></thead><tbody>${dutyRows}</tbody></table>
+    <table ${b}><caption>요일별 참여 인원 (참여/신청)</caption><thead><tr><th class="l">학년</th>${dayHead}</tr></thead><tbody>
+      ${partRow('1학년', t => `${t.t1}/${t.a1}`)}${partRow('2학년', t => `${t.t2}/${t.a2}`)}${partRow('3학년', t => `${t.t3}/${t.a3}`)}${partRow('합계', t => `<b>${t.T}</b>/${t.A}`)}</tbody></table>
+    <table ${b}><caption>학년별 주간 합계 (기록된 운영일 ${D.open}일)</caption><thead><tr><th class="l">학년</th><th>신청(연인원)</th><th>참여(연인원)</th><th>참여율</th><th>일평균 참여</th></tr></thead><tbody>${gradeRows}</tbody></table>`;
+}
+function renderReport(){
+  const mon = ui.week, edit = ui.reportEdit;
+  const dates = Object.keys(study).sort().reverse();
+  const adminList = `<section class="panel"><div class="ph"><h2>저장된 기록 (${dates.length}일)</h2><span class="spacer"></span>
+      <button class="btn sm" onclick="openExport()">기간별 엑셀 내보내기</button><button class="btn sm danger" onclick="openBulkDelete()" ${dis()}>기간 일괄 삭제</button></div>
+    ${dates.length ? `<div class="tw tall"><table><thead><tr><th class="l">날짜</th><th>유형</th><th>1학년</th><th>2학년</th><th>3학년</th><th>합계</th><th class="l">마지막 저장</th><th>관리</th></tr></thead><tbody>${dates.map(ds => { const r = study[ds], t = recTotals(r); return `<tr><td class="n l">${ds} <span class="muted">(${DOW[dowOf(ds)]})</span></td><td>${t ? '<span class="tag t-ok">참여 기록</span>' : '<span class="tag t-bad">특이사항</span>'}</td>${t ? `<td class="n">${t.t1}/${t.a1}</td><td class="n">${t.t2}/${t.a2}</td><td class="n">${t.t3}/${t.a3}</td><td class="n"><b>${t.T}</b>/${t.A}</td>` : `<td colspan="4" class="l" style="color:var(--bad)">${esc(r.reason)}</td>`}<td class="l small muted">${r.updatedAt ? new Date(r.updatedAt).toLocaleString('ko-KR') : ''}</td><td><button class="btn sm" onclick="openDay('${ds}')">열기</button></td></tr>`; }).join('')}</tbody></table></div>` : `<div class="empty"><h3>아직 저장된 참여 기록이 없습니다</h3><p>위 주간 표에서 <b>이번 주 기록 입력</b>을 누르거나, 달력에서 날짜를 눌러 첫 기록을 남겨 주세요.</p></div>`}</section>`;
+  return `<div class="stack">
+    <section class="panel">
+      <div class="ph"><div class="row"><button class="btn sm" onclick="moveWeek(-7)" aria-label="이전 주">◀</button><div style="min-width:220px;text-align:center"><div class="eyebrow">주간 보고</div><h2>${weekLabel(mon)} · <span class="num">${md(mon)} ~ ${md(addD(mon,4))}</span></h2></div><button class="btn sm" onclick="moveWeek(7)" aria-label="다음 주">▶</button><button class="btn sm ghost" onclick="ui.week='${mondayOf(todayStr)}';ui.reportEdit=false;saveUi();render()">이번 주</button></div>
+        <div class="row">${edit ? `<button class="btn" onclick="ui.reportEdit=false;render()">취소</button><button class="btn primary" onclick="saveWeek()">주간 기록 저장</button>` : `<button class="btn primary" onclick="if(needAdmin()){ui.reportEdit=true;render()}" ${dis()}>주간 현황 기록·수정</button><button class="btn" onclick="exportWeek()">Excel로 내보내기</button>`}</div></div>
+      ${edit ? '<p class="small muted" style="margin:-4px 0 10px">3학년은 남·여를 나눠 입력하면 합계가 자동 계산됩니다. 참여가 신청보다 많으면 칸이 주황색으로 표시됩니다. 사유를 적은 날은 인원 대신 사유만 저장됩니다.</p>' : ''}
+      ${weekTableHTML(mon, edit)}
+    </section>
+    ${edit ? '' : `<div class="grid g-2">
+      <section class="panel"><div class="ph"><h3>요일별 학년 신청·참여</h3></div>${weekChartSVG(mon, 260)}</section>
+      <section class="panel"><div class="ph"><h3>요약표</h3><span class="spacer"></span><button class="btn sm" id="repCopy">표 복사</button></div><div class="rep-tables" id="repTables">${weekReportTables(mon)}</div></section>
+    </div>`}
+    ${adminList}
+  </div>`;
+}
+function moveWeek(n){ ui.week = addD(ui.week, n); ui.reportEdit = false; saveUi(); render(); }
+afterRender = () => {
+  const b = document.getElementById('copyBtn');
+  if (b) b.onclick = () => { const txt = document.getElementById('repText').textContent;
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents(document.getElementById('repText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('글을 선택했습니다. Ctrl+C로 복사하세요.'); };
+    try { navigator.clipboard.writeText(txt).then(() => toast('요약문을 복사했습니다.'), fallback); } catch(e){ fallback(); } };
+  if (ui.tab === 'report' && ui.reportEdit) for (let i = 0; i < 5; i++) wkSum(i);
+  if (ui.tab === 'calendar' && ui.focus) setTimeout(() => { const el = document.querySelector('.day.focus'); if (el) el.scrollIntoView({block:'center', behavior:'smooth'}); }, 60);
+  const nx = document.getElementById('mineNext'), ml = document.getElementById('mineList'); if (nx && ml) ml.scrollTop = nx.offsetTop - 4;
+  const rc = document.getElementById('repCopy');
+  if (rc) rc.onclick = () => {
+    const box = document.getElementById('repTables'), html = box.innerHTML, txt = [...box.querySelectorAll('table')].map(t => (t.caption ? t.caption.textContent + '\n' : '') + [...t.rows].map(r => [...r.cells].map(c => c.textContent.trim()).join('\t')).join('\n')).join('\n\n');
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents(box); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('표를 선택했습니다. Ctrl+C로 복사하세요.'); };
+    try {
+      if (window.ClipboardItem) navigator.clipboard.write([new ClipboardItem({'text/html': new Blob([`<meta charset="utf-8">${html}`], {type:'text/html'}), 'text/plain': new Blob([txt], {type:'text/plain'})})]).then(() => toast('표를 복사했습니다. 한글·엑셀에 붙여 넣으면 표로 들어갑니다.'), fallback);
+      else navigator.clipboard.writeText(txt).then(() => toast('표를 복사했습니다.'), fallback);
+    } catch(e){ fallback(); }
+  };
+};
+function studyRows(start, end){
+  const rows = [['날짜','요일','학년','신청인원','참여인원','참여율','특이사항']];
+  Object.keys(study).sort().forEach(ds => {
+    if (ds < start || ds > end) return; const d = study[ds], w = DOW[dowOf(ds)];
+    if (d.reason){ rows.push([ds, w, '전체', '-', '-', '-', d.reason]); return; }
+    const g3 = d.g3 || {}, r = (a, t) => a ? +(t / a * 100).toFixed(1) : '';
+    rows.push([ds, w, '1학년', +d.g1?.apply||0, +d.g1?.attend||0, r(+d.g1?.apply, +d.g1?.attend), '']);
+    rows.push([ds, w, '2학년', +d.g2?.apply||0, +d.g2?.attend||0, r(+d.g2?.apply, +d.g2?.attend), '']);
+    if (g3.m_apply !== undefined){ rows.push([ds, w, '3학년(남)', +g3.m_apply||0, +g3.m_attend||0, r(+g3.m_apply, +g3.m_attend), '']); rows.push([ds, w, '3학년(여)', +g3.f_apply||0, +g3.f_attend||0, r(+g3.f_apply, +g3.f_attend), '']); }
+    rows.push([ds, w, '3학년(합계)', +g3.apply||0, +g3.attend||0, r(+g3.apply, +g3.attend), '']);
+  });
+  return rows;
+}
+function exportWeek(){
+  const mon = ui.week, end = addD(mon, 4), sm = schedMap();
+  const sum = [['자기주도학습 주간 보고'], [`${weekLabel(mon)} (${mon} ~ ${end})`], [],
+    ['날짜','요일','감독(기숙사)','감독(1·2자습실)','감독(3학년실)','1학년 신청','1학년 참여','2학년 신청','2학년 참여','3학년 남 신청','3학년 남 참여','3학년 여 신청','3학년 여 참여','3학년 신청','3학년 참여','전체 신청','전체 참여','참여율(%)','특이사항']];
+  for (let i = 0; i < 5; i++){
+    const ds = addD(mon, i), r = sm[ds], rec = study[ds], t = recTotals(rec), g3 = (rec && rec.g3) || {};
+    const dn = LOCS.map(l => r && isName(r.c[l]) ? r.c[l] : '-');
+    const hol = holidaysOn(duty, ds).filter(h => h.locs.includes('ALL')).map(h => h.reason).join(', ');
+    if (!t){ sum.push([ds, DOW[i+1], ...dn, '', '', '', '', '', '', '', '', '', '', '', '', '', (rec && rec.reason) || hol]); continue; }
+    sum.push([ds, DOW[i+1], ...dn, t.a1, t.t1, t.a2, t.t2, g3.m_apply ?? '', g3.m_attend ?? '', g3.f_apply ?? '', g3.f_attend ?? '', t.a3, t.t3, t.A, t.T, t.A ? +(t.T/t.A*100).toFixed(1) : '', rec.reason || '']);
+  }
+  const D = weekReportData(mon), hd = D.days.map((d, i) => `${DOW[i+1]}(${md(d.ds)})`);
+  sum.push([], ['감독 현황'], ['장소', ...hd], ...LOCS.map(l => [LOC_NAME[l], ...D.days.map(d => d.duty[l])]));
+  sum.push([], [`학년별 주간 합계 (기록된 운영일 ${D.open}일)`], ['학년','신청(연인원)','참여(연인원)','참여율(%)','일평균 참여'], ...D.grades.map(([g, a, t]) => [g, a, t, a ? +(t/a*100).toFixed(1) : '', D.open ? +(t/D.open).toFixed(1) : '']));
+  saveXlsx(`자기주도학습_주간보고_${mon}.xlsx`, [['주간보고', sum, [12,5,10,12,10,8,8,8,8,10,10,10,10,9,9,9,9,9,18]]]);
+}
+function openExport(){
+  const mon = mondayOf(todayStr);
+  openModal(`<h3>기간별 엑셀 내보내기</h3>
+    <div class="form-line"><label class="field"><span>시작일</span><input type="date" id="exS" value="${addD(mon,0)}"></label><label class="field"><span>종료일</span><input type="date" id="exE" value="${addD(mon,4)}"></label></div>
+    <div class="row"><button class="btn sm" onclick="exRange('week')">이번 주</button><button class="btn sm" onclick="exRange('month')">이번 달</button><button class="btn sm" onclick="exRange('term')">학기 전체</button></div>
+    <div class="mf"><button class="btn" onclick="closeModal()">취소</button><button class="btn primary" onclick="doExport()">엑셀 저장</button></div>`);
+}
+function exRange(t){
+  const S = document.getElementById('exS'), E = document.getElementById('exE');
+  if (t === 'week'){ const m = mondayOf(todayStr); S.value = m; E.value = addD(m, 4); }
+  if (t === 'month'){ const d = new Date(); S.value = fd(new Date(d.getFullYear(), d.getMonth(), 1)); E.value = fd(new Date(d.getFullYear(), d.getMonth()+1, 0)); }
+  if (t === 'term'){ S.value = duty.settings.start; E.value = duty.settings.end; }
+}
+function doExport(){
+  const s = document.getElementById('exS').value, e = document.getElementById('exE').value;
+  if (!s || !e || s > e){ toast('기간을 올바르게 선택하세요.', true); return; }
+  const rows = [['자기주도학습 현황 보고서'], [`조회 기간: ${s} ~ ${e}`], [], ...studyRows(s, e)];
+  closeModal(); saveXlsx(`자기주도학습현황_${s}_${e}.xlsx`, [['자습현황보고', rows, [12,5,12,9,9,8,22]]]);
+}
+function openBulkDelete(){
+  if (!needAdmin()) return;
+  openModal(`<h3>참여 기록 기간 일괄 삭제</h3><p class="small" style="margin:0;color:var(--bad)">선택한 기간의 참여 기록과 특이사항이 모두 지워집니다. 감독 배정표는 그대로 남습니다.</p>
+    <div class="form-line"><label class="field"><span>시작일</span><input type="date" id="bdS" value="${todayStr}"></label><label class="field"><span>종료일</span><input type="date" id="bdE" value="${todayStr}"></label></div>
+    <div class="mf"><button class="btn" onclick="closeModal()">취소</button><button class="btn danger solid" onclick="doBulkDelete()">삭제</button></div>`);
+}
+async function doBulkDelete(){
+  const s = document.getElementById('bdS').value, e = document.getElementById('bdE').value;
+  if (!s || !e || s > e){ toast('기간을 올바르게 선택하세요.', true); return; }
+  const list = Object.keys(study).filter(d => d >= s && d <= e); closeModal();
+  for (const d of list) await saveStudy(d, null);
+  render(); toast(`${list.length}일의 기록을 삭제했습니다.`);
+}
 
-      dbData[date] = { reason: reason };
-      saveAndRefresh();
-      alert(`${date} 일정이 '${reason}'(으)로 등록되었습니다.`);
+/* ---------- 4. 감독 배정 ---------- */
+function renderDuty(){
+  const sub = ui.dutySub;
+  const segBtn = (k, l) => `<button type="button" aria-pressed="${sub === k}" onclick="ui.dutySub='${k}';saveUi();render()">${l}</button>`;
+  const lock = isAdmin ? '' : `<div class="note info"><p><b>열람 전용입니다.</b> 배정 실행, 학사일정·명단 수정은 관리자에게 받은 코드로 오른쪽 위 <b>코드로 로그인</b>을 한 뒤에 할 수 있습니다.</p></div>`;
+  const body = sub === 'calendar' ? dutyCalendarHTML() : sub === 'teachers' ? teachersHTML() : scheduleHTML();
+  return `<div class="stack"><div class="row"><div class="seg" role="group" aria-label="감독 배정 메뉴">${segBtn('calendar','① 학사일정·휴업일')}${segBtn('teachers',`② 교사 명단 (${duty.teachers.length}명)`)}${segBtn('schedule','③ 배정표')}</div></div>${lock}${body}</div>`;
+}
+
+function scheduleHTML(){
+  const S = computeStats(duty); const stale = duty.meta && duty.meta.sig && duty.meta.sig !== sigOf(duty);
+  const locBtn = l => `<button class="btn" onclick="confirmGen('${l}')" ${dis()}>${LOC_SHORT[l]}만 다시 배정</button>`;
+  let prevMonth = '';
+  const teacherOpts = (l, cur) => `<option value="">— 선택 —</option>` + duty.teachers.filter(t => t.loc === l && !t.exclude).slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(t => `<option ${t.name === cur ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
+  const rows = duty.schedule.map((r, i) => {
+    const mo = r.date.slice(0, 7); const ms = mo !== prevMonth; prevMonth = mo; const d = pd(r.date);
+    const cls = [r.wk ? 'we' : '', !r.wk && LOCS.every(l => r.c[l] === 'X') ? 'hol' : '', r.date === todayStr ? 'today' : '', ms ? 'month-start' : ''].join(' ');
+    const cells = LOCS.map(l => {
+      const v = r.c[l], sp = r.sp && r.sp[l];
+      if (sp) return `<td><div class="row" style="justify-content:center;gap:4px;flex-wrap:nowrap"><select onchange="setCell('${r.date}','${l}',this.value,true)" ${dis()} aria-label="${r.date} ${LOC_NAME[l]} 특별근무">${teacherOpts(l, v)}</select>${isAdmin ? `<button class="btn sm ghost" title="특별 근무 삭제" onclick="delSpecial('${r.date}','${l}')">✕</button>` : ''}</div></td>`;
+      if (isAdmin && v !== 'X'){ const pinned = r.m && r.m[l]; return `<td><div class="row" style="justify-content:center;gap:4px;flex-wrap:nowrap"><select onchange="setCell('${r.date}','${l}',this.value,false)" aria-label="${r.date} ${LOC_NAME[l]}" style="${pinned ? 'border-color:var(--warn);background:var(--warn-soft)' : ''}">${v === '!' ? '<option value="!" selected>가능 교사 없음</option>' : ''}${pinned ? '<option value="__auto">↺ 고정 풀기 (자동 배정)</option>' : ''}${teacherOpts(l, v)}</select>${pinned ? '<span class="manual" title="직접 지정 — 다시 배정할 때 유지할 수 있음">지정</span>' : ''}</div></td>`; }
+      return `<td>${cellText(v, l, r)}</td>`;
+    }).join('');
+    return `<tr class="${cls}"><td class="n">${ms ? d.getMonth()+1 : ''}</td><td class="n">${d.getDate()}</td><td style="${r.w===0?'color:var(--bad)':r.w===6?'color:var(--g3)':''}">${DOW[r.w]}</td>${cells}<td class="l small">${esc(r.note || '')}</td></tr>`;
+  }).join('');
+  return `${recommendNote(S)}
+    ${stale ? `<div class="note"><p><b>배정 이후 학사일정이나 교사 조건이 바뀌었습니다.</b> 바뀐 내용을 반영하려면 다시 배정하세요. (지금 배정표는 바뀌기 전 기준입니다)</p></div>` : ''}
+    <section class="panel">
+      <div class="ph"><div class="row"><button class="btn primary" onclick="confirmGen('ALL')" ${dis()}>전체 장소 다시 배정</button>${LOCS.map(locBtn).join('')}</div>
+        <div class="row"><button class="btn" onclick="exportScheduleXlsx()">Excel로 내보내기</button><button class="btn" onclick="exportCSV()">CSV로 내보내기</button></div></div>
+      <p class="small muted" style="margin:0 0 8px">${duty.schedule.length}일 · ${duty.meta && duty.meta.generatedAt ? `마지막 배정 ${new Date(duty.meta.generatedAt).toLocaleString('ko-KR')} · 배정 번호(시드) <span class="num">${duty.meta.seed}</span>` : '아직 배정하지 않았습니다'}${isAdmin ? ' · 특정 날짜에 교사를 먼저 정하려면 칸에서 교사를 고르세요. <span class="manual">지정</span> 칸은 다시 배정할 때 유지하고 나머지만 공정하게 채울 수 있으며, 검증표에도 남습니다.' : ''}</p>
+      ${duty.schedule.length ? `<div class="tw tall"><table><thead><tr><th>월</th><th>일</th><th>요일</th><th><span class="loc DORM">기숙사</span></th><th><span class="loc STUDY_12">여학생정독실·1,2자습실</span></th><th><span class="loc STUDY_3">3학년 자습실</span></th><th class="l">비고</th></tr></thead><tbody>${rows}</tbody></table></div>`
+        : `<div class="empty"><h3>배정표가 비어 있습니다</h3><p>관리자 로그인 후 <b>전체 장소 다시 배정</b>을 누르면 학기 전체 배정표가 만들어집니다.</p></div>`}
+    </section>`;
+}
+async function confirmGen(target){
+  if (!needAdmin()) return;
+  const name = target === 'ALL' ? '전체 장소' : LOC_NAME[target];
+  const manual = duty.schedule.reduce((n, r) => n + LOCS.filter(l => (target === 'ALL' || target === l) && !r.wk && r.m && r.m[l] && isName(r.c[l])).length, 0);
+  const keep = await new Promise(res => {
+    openModal(`<h3>${esc(name)} 다시 배정</h3>
+      <p class="muted" style="margin:0">${esc(name)}의 평일 감독을 배정 원칙에 따라 새로 정합니다. 주말·특별 근무 지정은 그대로 둡니다.</p>
+      ${manual ? `<div class="box"><h4>직접 지정한 칸 ${manual}개를 어떻게 할까요?</h4>
+        <label class="chk" style="white-space:normal;align-items:flex-start;padding:8px 10px"><input type="radio" name="genKeep" value="keep" checked style="margin-top:3px"> <span><b>유지하고 나머지만 공정하게 배정</b> (권장)<br><span class="small muted">지정한 교사의 횟수·금요일 횟수를 먼저 세고, 남은 칸을 그만큼 덜 배정해 전체 균형을 맞춥니다.</span></span></label>
+        <label class="chk" style="white-space:normal;align-items:flex-start;padding:8px 10px"><input type="radio" name="genKeep" value="over" style="margin-top:3px"> <span><b>모두 새로 배정</b> (지정한 칸 덮어쓰기)</span></label></div>`
+      : '<p class="small muted" style="margin:0">직접 지정한 칸이 없습니다. 특정 날짜에 교사를 먼저 정하려면 배정표에서 그 칸의 교사를 고른 뒤 다시 배정하세요.</p>'}
+      <div class="mf"><button class="btn" id="genNo">취소</button><button class="btn primary" id="genYes">배정 실행</button></div>`);
+    document.getElementById('genNo').onclick = () => { closeModal(); res(null); };
+    document.getElementById('genYes').onclick = () => { const v = document.querySelector('input[name="genKeep"]:checked'); closeModal(); res(v ? v.value === 'keep' : false); };
+  });
+  if (keep === null) return;
+  const seed = Math.floor(Math.random() * 900000) + 100000;
+  duty.schedule = generateSchedule(duty, target, seed, keep);
+  duty.meta = {seed, generatedAt: Date.now(), sig: sigOf(duty), target, keptPins: keep ? manual : 0};
+  saveDuty(); render(); toast(`${name} 배정을 완료했습니다.${keep && manual ? ` (직접 지정 ${manual}칸 유지)` : ''}`);
+}
+function setCell(ds, loc, name, isSp){
+  if (!needAdmin()) return;
+  const r = duty.schedule.find(x => x.date === ds); if (!r) return;
+  if (!isSp && name === '__auto'){ if (r.m) delete r.m[loc]; saveDuty(); render(); toast('고정을 풀었습니다. 다음 배정 때 자동으로 정해집니다.'); return; }
+  r.c[loc] = name;
+  if (isSp){ const s = duty.specials.find(x => x.date === ds && x.loc === loc); if (s) s.assigned = name; }
+  else { r.m = r.m || {}; r.m[loc] = true; }
+  saveDuty(); render();
+}
+function insertSpecialRow(sp){
+  let r = duty.schedule.find(x => x.date === sp.date);
+  if (!r){ const w = dowOf(sp.date); r = {date: sp.date, w, wk: w === 0 || w === 6, c:{DORM:'X', STUDY_12:'X', STUDY_3:'X'}, sp:{}, m:{}, note: holidayNote(duty, sp.date)}; duty.schedule.push(r); duty.schedule.sort((a, b) => a.date.localeCompare(b.date)); }
+  r.sp = r.sp || {}; r.sp[sp.loc] = true; r.c[sp.loc] = sp.assigned || ''; if (sp.note && !r.note) r.note = sp.note;
+}
+function openAddDuty(){
+  if (!needAdmin()) return;
+  openModal(`<h3>근무일 추가 (주말·학사일정 외 특별 근무)</h3>
+    <p class="small muted" style="margin:0">학사일정에 없는 주말·공휴일 감독을 배정표에 끼워 넣습니다. 이미 만든 평일 배정은 다시 섞이지 않고, 근무자는 신청자 중에서 바로 지정할 수 있습니다. 횟수는 평일과 따로 셉니다.</p>
+    <div class="form-line"><label class="field"><span>날짜 (시작)</span><input type="date" id="adS"></label><label class="field"><span>끝 (하루면 비워 두기)</span><input type="date" id="adE"></label></div>
+    <label class="chk" style="align-self:flex-start"><input type="checkbox" id="adWe" checked> 기간 안의 토·일요일만 추가</label>
+    <div class="field"><span>근무 장소 (여러 곳 선택 가능)</span><div class="row">${LOCS.map(l => `<label class="chk"><input type="checkbox" class="adLoc" value="${l}" ${l === 'DORM' ? 'checked' : ''}> ${LOC_NAME[l]}</label>`).join('')}</div></div>
+    <label class="field"><span>비고</span><input type="text" id="adNote" placeholder="예: 주말 기숙사 감독, 모의고사 대비 주말 자습"></label>
+    <div class="mf"><button class="btn" onclick="closeModal()">취소</button><button class="btn primary" onclick="addSpecial()">근무일 추가</button></div>`);
+}
+function addSpecial(){
+  if (!needAdmin()) return;
+  const s = document.getElementById('adS').value, e = document.getElementById('adE').value || s, weOnly = document.getElementById('adWe').checked;
+  const locs = [...document.querySelectorAll('.adLoc:checked')].map(c => c.value), note = document.getElementById('adNote').value.trim() || '주말·특별 근무';
+  if (!s || e < s){ toast('날짜를 올바르게 선택하세요.', true); return; }
+  if (!locs.length){ toast('근무 장소를 하나 이상 고르세요.', true); return; }
+  let n = 0, skip = 0;
+  for (let d = s; d <= e; d = addD(d, 1)){
+    const w = dowOf(d); if (s !== e && weOnly && w !== 0 && w !== 6) continue;
+    locs.forEach(loc => { if (duty.specials.some(x => x.date === d && x.loc === loc)){ skip++; return; } const sp = {date:d, loc, note, assigned:''}; duty.specials.push(sp); insertSpecialRow(sp); n++; });
+  }
+  if (!n){ toast(skip ? '이미 등록된 근무일입니다.' : '추가할 날짜가 없습니다. 기간과 토·일 옵션을 확인하세요.', true); return; }
+  closeModal(); saveDuty(); render(); toast(`특별 근무 ${n}건을 추가했습니다.${skip ? ` (이미 있던 ${skip}건 제외)` : ''}`);
+}
+function specialsHTML(){
+  const list = duty.specials.slice().sort((a, b) => a.date.localeCompare(b.date) || LOCS.indexOf(a.loc) - LOCS.indexOf(b.loc));
+  return `<section class="panel"><div class="ph"><h2>추가 근무일 (${list.length}건)</h2><span class="spacer"></span><button class="btn primary" onclick="openAddDuty()" ${dis()}>＋ 근무일 추가</button></div>
+    ${list.length ? `<div class="tw"><table><thead><tr><th>날짜</th><th>요일</th><th>장소</th><th class="l">비고</th><th>근무자</th><th>관리</th></tr></thead><tbody>${list.map(sp => `<tr><td class="n">${sp.date}</td><td>${DOW[dowOf(sp.date)]}</td><td><span class="loc ${sp.loc}">${LOC_NAME[sp.loc]}</span></td><td class="l">${esc(sp.note)}</td><td>${sp.assigned ? esc(sp.assigned) : '<span class="cell-x">미지정 · 배정표에서 선택</span>'}</td><td><button class="btn sm danger" onclick="delSpecial('${sp.date}','${sp.loc}')" ${dis()}>삭제</button></td></tr>`).join('')}</tbody></table></div>`
+      : `<p class="muted small" style="margin:0">학사일정 외에 주말·공휴일 감독이 필요하면 <b>근무일 추가</b>로 등록하세요. 등록한 날은 배정표와 통합 달력에 함께 나옵니다.</p>`}</section>`;
+}
+function delSpecial(ds, loc){
+  if (!needAdmin()) return;
+  duty.specials = duty.specials.filter(s => !(s.date === ds && s.loc === loc));
+  const r = duty.schedule.find(x => x.date === ds);
+  if (r){ r.c[loc] = 'X'; delete r.sp[loc]; if (r.wk && !Object.keys(r.sp).length) duty.schedule = duty.schedule.filter(x => x !== r); }
+  saveDuty(); render();
+}
+function scheduleRowsAoa(){
+  const rows = [['월','일','요일','기숙사','여학생정독실/1,2자습실','3학년 자습실','비고']];
+  duty.schedule.forEach(r => { const d = pd(r.date); rows.push([d.getMonth()+1, d.getDate(), DOW[r.w], ...LOCS.map(l => r.c[l] === '!' ? '가능교사없음' : r.c[l] === '' ? '미지정' : r.c[l] + (r.m && r.m[l] ? '(지정)' : '')), r.note || '']); });
+  return rows;
+}
+function exportCSV(){
+  if (!duty.schedule.length){ toast('먼저 배정을 실행하세요.', true); return; }
+  const csv = '﻿' + scheduleRowsAoa().map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
+  saveFile('자기주도학습_감독배정표.csv', csv, 'text/csv;charset=utf-8');
+}
+function exportScheduleXlsx(){
+  if (!duty.schedule.length){ toast('먼저 배정을 실행하세요.', true); return; }
+  saveXlsx('자기주도학습_감독배정표.xlsx', [['감독배정표', scheduleRowsAoa(), [5,5,5,12,20,12,24]], ['교사별 검증', fairnessAoa(), [14,10,10,10,8,8,8,30,16,60]]]);
+}
+
+function locChecks(name){ return `<div class="row" style="gap:6px">${['ALL', ...LOCS].map(l => `<label class="chk"><input type="checkbox" name="${name}" value="${l}" ${l === 'ALL' ? 'checked' : ''} onchange="locToggle('${name}',this)" ${dis()}> ${LOC_NAME[l]}</label>`).join('')}</div>`; }
+function locToggle(name, el){ const all = document.querySelectorAll(`input[name="${name}"]`); if (el.checked){ all.forEach(c => { if ((el.value === 'ALL') !== (c.value === 'ALL')) c.checked = false; }); } }
+function getLocs(name){ const v = [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(c => c.value); return v.length && !v.includes('ALL') ? v : ['ALL']; }
+
+function dutyCalendarHTML(){
+  const st = duty.settings;
+  const hs = duty.holidays.slice().sort((a, b) => a.date.localeCompare(b.date));
+  const dateIn = (id, val, lbl) => `<label class="field"><span>${lbl}</span><input type="date" id="${id}" value="${val}" onchange="setDate('${id}',this.value)" ${dis()}></label>`;
+  return `<div class="grid g-dutyset">
+    <section class="panel"><div class="ph"><h2>학기·장소별 운영 기간</h2></div>
+      <div class="stack" style="gap:10px">
+        <div class="form-line"><label class="field" style="flex:0 1 110px"><span>학기 이름</span><input type="text" id="termName" value="${esc(st.term || '')}" placeholder="2학기" onchange="if(needAdmin()){duty.settings.term=this.value.trim();saveDuty();render();}" ${dis()}></label>${dateIn('start', st.start, '학기 시작일')}${dateIn('end', st.end, '학기 종료일')}</div>
+        ${LOCS.map(l => dateIn('end_' + l, st.ends[l], `<span class="loc ${l}">${LOC_NAME[l]}</span> 운영 종료일`)).join('')}
+        <p class="tiny muted" style="margin:0">날짜는 바꾸는 즉시 저장됩니다. 배정표에 반영하려면 배정표 탭에서 다시 배정하세요.<br>수정 권한은 관리자가 발급한 코드로만 생기며, 아래 권한 코드 관리에서 언제든 회수할 수 있습니다.</p>
+      </div></section>
+    <section class="panel"><div class="ph"><h2>근무 제외일(휴업일) 추가</h2></div>
+      <div class="stack" style="gap:12px">
+        <div class="box"><h4>하루 추가</h4><div class="form-line"><label class="field" style="flex:0 1 170px"><span>날짜</span><input type="date" id="hSingle" ${dis()}></label><label class="field"><span>사유</span><input type="text" id="hSingleNote" placeholder="예: 개교기념일" ${dis()}></label><button class="btn" onclick="addHoliday('single')" ${dis()}>추가</button></div>${locChecks('locSingle')}</div>
+        <div class="box"><h4>기간 추가</h4><div class="form-line"><label class="field" style="flex:0 1 170px"><span>시작</span><input type="date" id="hRangeS" ${dis()}></label><label class="field" style="flex:0 1 170px"><span>끝</span><input type="date" id="hRangeE" ${dis()}></label><label class="field"><span>사유</span><input type="text" id="hRangeNote" placeholder="예: 2학기 기말고사" ${dis()}></label><button class="btn" onclick="addHoliday('range')" ${dis()}>추가</button></div>${locChecks('locRange')}<p class="tiny muted" style="margin:0">기간 안의 주말은 자동으로 건너뜁니다.</p></div>
+        <div class="box"><h4>여러 줄 한 번에 추가</h4><textarea id="hBulk" rows="3" placeholder="한 줄에 하나씩: 2026-12-03: 기말고사&#10;장소 지정: 2026-12-04: [기숙사] 기숙사 소독" ${dis()}></textarea><div class="row"><button class="btn" onclick="addHoliday('bulk')" ${dis()}>일괄 추가</button></div></div>
+      </div></section>
+  </div>
+  ${codesPanelHTML()}
+  ${specialsHTML()}
+  <section class="panel"><div class="ph"><h2>등록된 근무 제외일 (${hs.length}건)</h2><span class="spacer"></span>
+      <div class="row"><input type="date" id="hdS" style="width:auto" ${dis()}><span>~</span><input type="date" id="hdE" style="width:auto" ${dis()}><button class="btn sm danger" onclick="delHolidayRange()" ${dis()}>기간 내 삭제</button><button class="btn sm danger" onclick="delHolidaySel()" ${dis()}>선택 삭제</button><button class="btn sm danger" onclick="delHolidayAll()" ${dis()}>전체 비우기</button></div></div>
+    <div class="tw tall"><table><thead><tr><th style="width:40px"><input type="checkbox" onchange="document.querySelectorAll('.hsel').forEach(c=>c.checked=this.checked)" aria-label="전체 선택" ${dis()}></th><th style="width:170px">날짜</th><th style="width:60px">요일</th><th>적용 장소</th><th class="l">사유</th><th style="width:70px">관리</th></tr></thead>
+    <tbody>${hs.length ? hs.map(h => `<tr><td><input type="checkbox" class="hsel" value="${h.id}" ${dis()}></td><td><input type="date" value="${h.date}" onchange="editHoliday(${h.id},'date',this.value)" ${dis()}></td><td>${DOW[dowOf(h.date)]}</td>
+      <td><div class="row" style="justify-content:center;gap:5px">${['ALL', ...LOCS].map(l => `<label class="chk"><input type="checkbox" ${h.locs.includes(l) ? 'checked' : ''} onchange="holidayLoc(${h.id},'${l}',this.checked)" ${dis()}> ${l === 'ALL' ? '전체' : LOC_SHORT[l]}</label>`).join('')}</div></td>
+      <td><input type="text" value="${esc(h.reason)}" onchange="editHoliday(${h.id},'reason',this.value)" ${dis()}></td><td><button class="btn sm danger" onclick="delHoliday(${h.id})" ${dis()}>삭제</button></td></tr>`).join('') : '<tr><td colspan="6" class="muted">등록된 제외일이 없습니다.</td></tr>'}</tbody></table></div></section>`;
+}
+function setDate(id, v){
+  if (!needAdmin() || !v) return;
+  if (id === 'start') duty.settings.start = v; else if (id === 'end') duty.settings.end = v; else duty.settings.ends[id.slice(4)] = v;
+  saveDuty(); render(); toast('저장했습니다.');
+}
+function changePin(){ if (!needAdmin()) return; const p = document.getElementById('newPin').value.trim(); if (!/^\d{4,8}$/.test(p)){ toast('숫자 4~8자리로 입력하세요.', true); return; } duty.settings.pin = p; saveDuty(); toast('관리자 번호를 바꿨습니다.'); render(); }
+function addHoliday(kind){
+  if (!needAdmin()) return; let n = 0;
+  const push = (date, reason, locs) => { duty.holidays.push({id: duty.nextId++, date, reason: reason || '휴업일', locs}); n++; };
+  if (kind === 'single'){ const d = document.getElementById('hSingle').value; if (!d){ toast('날짜를 선택하세요.', true); return; } push(d, document.getElementById('hSingleNote').value.trim(), getLocs('locSingle')); }
+  if (kind === 'range'){
+    const s = document.getElementById('hRangeS').value, e = document.getElementById('hRangeE').value;
+    if (!s || !e || s > e){ toast('시작일과 끝을 올바르게 선택하세요.', true); return; }
+    const locs = getLocs('locRange'), note = document.getElementById('hRangeNote').value.trim();
+    for (let d = s; d <= e; d = addD(d, 1)){ const w = dowOf(d); if (w !== 0 && w !== 6) push(d, note, locs); }
+  }
+  if (kind === 'bulk'){
+    document.getElementById('hBulk').value.split('\n').forEach(line => {
+      const m = line.trim().match(/^(\d{4}-\d{2}-\d{2})\s*:?\s*(.*)$/); if (!m) return;
+      let rest = m[2].trim(), locs = ['ALL'];
+      const lm = rest.match(/^\[(.*?)\]/);
+      if (lm){ const t = lm[1]; locs = t.includes('기숙사') ? ['DORM'] : (t.includes('1,2') || t.includes('1·2') || t.includes('여학생')) ? ['STUDY_12'] : t.includes('3학년') ? ['STUDY_3'] : ['ALL']; rest = rest.replace(/^\[.*?\]/, '').trim(); }
+      push(m[1], rest, locs);
     });
+  }
+  if (!n){ toast('추가할 날짜를 찾지 못했습니다. 형식: 2026-12-03: 사유', true); return; }
+  saveDuty(); render(); toast(`제외일 ${n}건을 추가했습니다.`);
+}
+function editHoliday(id, k, v){ if (!needAdmin()) return; const h = duty.holidays.find(x => x.id === id); if (h && (k !== 'date' || v)){ h[k] = v; saveDuty(); if (k === 'date') render(); } }
+function holidayLoc(id, l, on){
+  if (!needAdmin()) return; const h = duty.holidays.find(x => x.id === id); if (!h) return;
+  if (l === 'ALL') h.locs = ['ALL'];
+  else { h.locs = h.locs.filter(x => x !== 'ALL' && x !== l); if (on) h.locs.push(l); if (!h.locs.length) h.locs = ['ALL']; }
+  saveDuty(); render();
+}
+function delHoliday(id){ if (!needAdmin()) return; duty.holidays = duty.holidays.filter(h => h.id !== id); saveDuty(); render(); }
+async function delHolidaySel(){ if (!needAdmin()) return; const ids = [...document.querySelectorAll('.hsel:checked')].map(c => +c.value); if (!ids.length){ toast('삭제할 항목을 선택하세요.', true); return; } if (await ask('선택 삭제', `제외일 ${ids.length}건을 지웁니다.`, '삭제', true)){ duty.holidays = duty.holidays.filter(h => !ids.includes(h.id)); saveDuty(); render(); } }
+async function delHolidayRange(){ if (!needAdmin()) return; const s = document.getElementById('hdS').value, e = document.getElementById('hdE').value; if (!s || !e){ toast('삭제할 기간을 선택하세요.', true); return; } const n = duty.holidays.filter(h => h.date >= s && h.date <= e).length; if (await ask('기간 내 삭제', `${s} ~ ${e} 제외일 ${n}건을 지웁니다.`, '삭제', true)){ duty.holidays = duty.holidays.filter(h => h.date < s || h.date > e); saveDuty(); render(); } }
+async function delHolidayAll(){ if (!needAdmin()) return; if (await ask('전체 비우기', `등록된 제외일 ${duty.holidays.length}건을 모두 지웁니다.`, '모두 삭제', true)){ duty.holidays = []; saveDuty(); render(); } }
 
-    function deleteEntry(date) {
-      if (confirm(`${date} 데이터를 삭제하시겠습니까?`)) {
-        delete dbData[date];
-        saveAndRefresh();
-      }
-    }
+const EXC = {'':'근무 가능','교문지도':'제외 · 교문지도','급식':'제외 · 급식'};
+function teachersHTML(){
+  const list = duty.teachers.slice().sort((a, b) => LOCS.indexOf(a.loc) - LOCS.indexOf(b.loc) || a.name.localeCompare(b.name, 'ko'));
+  const excSel = (t) => { const custom = t.exclude && !(t.exclude in EXC); return `<select onchange="tExc(${t.id},this.value)" ${dis()}>${Object.entries(EXC).map(([v, l]) => `<option value="${v}" ${!custom && t.exclude === v ? 'selected' : ''}>${l}</option>`).join('')}<option value="__custom" ${custom ? 'selected' : ''}>제외 · 직접 입력</option></select>${custom ? `<input type="text" value="${esc(t.exclude)}" onchange="tSet(${t.id},'exclude',this.value.trim()||'기타')" style="margin-top:4px" ${dis()}>` : ''}`; };
+  let prevLoc = '';
+  const rows = list.map(t => {
+     const head = t.loc !== prevLoc ? `<tr><td colspan="${isSuper ? 8 : 7}" class="l" style="background:var(--surface-2)"><span class="loc ${t.loc}">${LOC_NAME[t.loc]}</span> <span class="muted small">${duty.teachers.filter(x => x.loc === t.loc).length}명 · 배정 감독 수 ${duty.teachers.filter(x => x.loc === t.loc && !x.exclude).length}명</span></td></tr>` : '';
+    prevLoc = t.loc;
+    return head + `<tr><td><select onchange="tSet(${t.id},'loc',this.value)" ${dis()}>${LOCS.map(l => `<option value="${l}" ${t.loc === l ? 'selected' : ''}>${LOC_NAME[l]}</option>`).join('')}</select></td>
+      <td><b>${esc(t.name)}</b></td><td style="min-width:150px">${excSel(t)}</td>
+      <td><input type="checkbox" ${t.prevEnd ? 'checked' : ''} onchange="tSet(${t.id},'prevEnd',this.checked)" aria-label="지난 학기 말 근무" ${dis()}></td>
+      <td><div class="row" style="justify-content:center;gap:4px;flex-wrap:nowrap">${['월','화','수','목','금'].map(d => `<label class="chk"><input type="checkbox" ${t.offDays.includes(d) ? 'checked' : ''} onchange="tDay(${t.id},'${d}',this.checked)" ${dis()}>${d}</label>`).join('')}</div></td>
+      <td><div class="row" style="flex-wrap:nowrap;gap:4px"><input type="date" value="${t.leaveStart}" onchange="tSet(${t.id},'leaveStart',this.value)" ${dis()}>~<input type="date" value="${t.leaveEnd}" onchange="tSet(${t.id},'leaveEnd',this.value)" ${dis()}></div></td>
+      ${isSuper ? `<td>${(c => c ? `<div class="row" style="justify-content:center;gap:4px;flex-wrap:nowrap"><span class="tag t-ok num">${c}</span><button class="btn sm danger" onclick="revokeCode('${c}')">회수</button></div>` : `<button class="btn sm" onclick="grantCode(${t.id})">코드 부여</button>`)(codeOfTeacher(t))}</td>` : ''}
+      <td><button class="btn sm danger" onclick="tDel(${t.id})" ${dis()}>삭제</button></td></tr>`;
+  }).join('');
+  const missing = rosterMissing();
+  const upd = missing.length && isAdmin ? `<div class="note info"><p><b>새 명단에 있는 교사 ${missing.length}명이 아직 등록되지 않았습니다:</b> ${missing.map(m => `${esc(m.name)}(${LOC_SHORT[m.loc]})`).join(', ')}</p><p>근무 상태는 <b>제외 · 교문지도</b>로 들어가므로 기존 배정표와 횟수는 바뀌지 않습니다. <button class="btn sm primary" onclick="applyRoster()">${missing.length}명 추가</button></p></div>` : '';
+  return `${upd}<section class="panel"><div class="ph"><h2>교사 추가</h2></div>
+      <div class="t-add">
+        <div class="field"><span>배정 장소</span><select id="ntLoc" ${dis()}>${LOCS.map(l => `<option value="${l}">${LOC_NAME[l]}</option>`).join('')}</select></div>
+        <div class="field"><span>이름</span><input type="text" id="ntName" placeholder="예: 홍길동" ${dis()}></div>
+        <div class="field"><span>근무 상태</span><select id="ntExc" ${dis()}>${Object.entries(EXC).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}<option value="__custom">제외 · 직접 입력</option></select></div>
+        <div class="field"><span>직접 입력 사유</span><input type="text" id="ntExcTxt" placeholder="직접 입력일 때" ${dis()}></div>
+        <div class="field"><span>지난 학기 말 근무</span><label class="chk"><input type="checkbox" id="ntPrev" ${dis()}> 근무함</label></div>
+        <div class="field"><span>근무 불가 요일</span><div class="days">${['월','화','수','목','금'].map(d => `<label class="chk"><input type="checkbox" class="ntDay" value="${d}" ${dis()}>${d}</label>`).join('')}</div></div>
+        <div class="field"><span>근무 불가 기간 (병가·경조사)</span><div class="range"><input type="date" id="ntLS" ${dis()}><span>~</span><input type="date" id="ntLE" ${dis()}></div></div>
+        <div class="field"><span>&nbsp;</span><button class="btn primary" onclick="tAdd()" ${dis()}>추가</button></div>
+      </div></section>
+    <section class="panel"><div class="ph"><h2>전체 교사 명단</h2><span class="muted small">장소별 가나다순 · 표에서 바로 수정됩니다</span></div>
+      <div class="tw tall"><table><thead><tr><th>배정 장소</th><th>이름</th><th>근무 상태</th><th>지난 학기 말 근무</th><th>근무 불가 요일</th><th>근무 불가 기간</th>${isSuper ? '<th>수정 권한</th>' : ''}<th>관리</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="tiny muted" style="margin:8px 0 0">'지난 학기 말 근무'를 체크한 선생님은 학기 초 배정에서 뒤로 밀립니다. 조건을 바꾼 뒤에는 배정표 탭에서 다시 배정해야 반영됩니다.</p></section>`;
+}
+function rosterMissing(){
+  const d = defaultDuty().teachers;
+  return d.filter(x => !duty.teachers.some(t => t.name === x.name));
+}
+function applyRoster(){
+  if (!needAdmin()) return;
+  const m = rosterMissing();
+  m.forEach(x => duty.teachers.push({...x, id: duty.nextId++}));
+  saveDuty(); render(); toast(`${m.length}명을 명단에 추가했습니다. (제외 · 교문지도)`);
+}
+function tFind(id){ return duty.teachers.find(t => t.id === id); }
+function tSet(id, k, v){ if (!needAdmin()) return; const t = tFind(id); if (!t) return; t[k] = v; saveDuty(); if (k === 'loc' || k === 'exclude') render(); }
+function tExc(id, v){ if (!needAdmin()) return; const t = tFind(id); if (!t) return; t.exclude = v === '__custom' ? (t.exclude && !(t.exclude in EXC) ? t.exclude : '기타') : v; saveDuty(); render(); }
+function tDay(id, d, on){ if (!needAdmin()) return; const t = tFind(id); if (!t) return; t.offDays = t.offDays.filter(x => x !== d); if (on) t.offDays.push(d); saveDuty(); }
+async function tDel(id){ if (!needAdmin()) return; const t = tFind(id); if (t && await ask('교사 삭제', `${esc(t.name)} 선생님을 명단에서 지웁니다. 이미 만들어진 배정표의 이름은 그대로 남습니다.`, '삭제', true)){ duty.teachers = duty.teachers.filter(x => x.id !== id); saveDuty(); render(); } }
+function tAdd(){
+  if (!needAdmin()) return;
+  const name = document.getElementById('ntName').value.trim(); if (!name){ toast('이름을 입력하세요.', true); return; }
+  const loc = document.getElementById('ntLoc').value;
+  if (duty.teachers.some(t => t.name === name && t.loc === loc)){ toast('같은 장소에 같은 이름이 이미 있습니다.', true); return; }
+  const ev = document.getElementById('ntExc').value;
+  duty.teachers.push({id: duty.nextId++, name, loc, exclude: ev === '__custom' ? (document.getElementById('ntExcTxt').value.trim() || '기타') : ev,
+    offDays: [...document.querySelectorAll('.ntDay:checked')].map(c => c.value), prevEnd: document.getElementById('ntPrev').checked,
+    leaveStart: document.getElementById('ntLS').value, leaveEnd: document.getElementById('ntLE').value});
+  saveDuty(); render(); toast(`${name} 선생님을 추가했습니다.`);
+}
 
-    function openBulkDeleteModal() {
-      const modal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
-      const todayStr = new Date().toISOString().split('T')[0];
-      document.getElementById('deleteStartDate').value = todayStr;
-      document.getElementById('deleteEndDate').value = todayStr;
-      modal.show();
-    }
+/* ---------- 5. 공정성 검증 ---------- */
+function recommendNote(S){
+  const arr = LOCS.map(l => ({l, ...S.locs[l]})).filter(x => x.n > 0).sort((a, b) => b.avg - a.avg);
+  if (arr.length < 2 || !duty.schedule.length) return '';
+  const hi = arr[0], lo = arr[arr.length - 1], diff = hi.avg - lo.avg;
+  if (diff < 0.5) return `<div class="note ok"><p><b>장소 간 1인당 평균 감독 횟수가 고르게 맞춰져 있습니다.</b> 가장 많은 곳과 적은 곳의 차이 ${diff.toFixed(2)}회.</p></div>`;
+  let move = Math.round((hi.slots * lo.n - lo.slots * hi.n) / (hi.slots + lo.slots)); if (move < 1) move = 1;
+  return `<div class="note"><p><b>장소 간 1인당 평균 감독 횟수 차이 ${diff.toFixed(2)}회</b> — ${LOC_NAME[hi.l]} ${hi.avg.toFixed(2)}회, ${LOC_NAME[lo.l]} ${lo.avg.toFixed(2)}회.</p>
+    <p>부담을 비슷하게 맞추려면 ${LOC_NAME[lo.l]}에서 ${LOC_NAME[hi.l]}(으)로 <b>${move}명</b>을 옮겨 배치하는 것을 검토하세요. (장소 이동은 교사 명단에서 바꾼 뒤 다시 배정)</p></div>`;
+}
+function locSummaryTable(S){
+  return `<div class="tw"><table><thead><tr><th class="l">장소</th><th>운영 종료일</th><th>운영일(필요 감독 수)</th><th>배정 감독 수</th><th>1인당 평균</th><th>최소 ~ 최대</th><th>최대 편차</th><th>금요일 최다</th><th>미배정</th></tr></thead><tbody>${LOCS.map(l => { const L = S.locs[l]; const sp = L.max - L.min;
+    return `<tr><td class="l"><span class="loc ${l}">${LOC_NAME[l]}</span></td><td class="n">${duty.settings.ends[l]}</td><td class="n">${L.need}일</td><td class="n">${L.n}명</td><td class="n"><b>${L.avg.toFixed(2)}회</b></td><td class="n">${L.min} ~ ${L.max}회</td><td>${L.n ? `<span class="tag ${sp <= 1 ? 't-ok' : sp <= 2 ? 't-warn' : 't-bad'}">${sp}회</span>` : '–'}</td><td><span class="tag ${L.friMax <= 1 ? 't-ok' : L.friNeed > L.n ? 't-warn' : 't-bad'}">${L.friMax}회</span> <span class="tiny muted">금 ${L.friNeed}일/${L.n}명</span></td><td>${L.none ? `<span class="tag t-bad">${L.none}일</span>` : '<span class="tag t-ok">없음</span>'}</td></tr>`; }).join('')}</tbody></table></div>`;
+}
+function verdict(t, p, L){
+  if (t.exclude) return {cls:'t-mute', text:`근무 제외 (${t.exclude})`, why:''};
+  const lo = Math.floor(L.avg + 1e-9), hi = Math.ceil(L.avg - 1e-9), why = [];
+  const cons = []; if (t.offDays.length) cons.push(`불가 요일 ${t.offDays.join('·')}`); if (t.leaveStart && t.leaveEnd) cons.push('불가 기간'); if (t.prevEnd) cons.push('지난 학기 말 근무'); if (p.manual) cons.push(`직접 지정 ${p.manual}칸`);
+  if (p.wd < lo) why.push(`평균보다 ${(L.avg - p.wd).toFixed(1)}회 적음`);
+  if (p.wd > hi) why.push(`평균보다 ${(p.wd - L.avg).toFixed(1)}회 많음`);
+  const friOver = L.friNeed > L.n;
+  if (p.fri >= 2) why.push(`금요일 ${p.fri}회`);
+  if (!why.length) return {cls:'t-ok', text: '균등 · 금요일 1회 이하', why:''};
+  const reason = cons.length ? cons.join(', ') : '';
+  const friWhy = p.fri >= 2 && friOver ? `운영 금요일 ${L.friNeed}일 > 배정 인원 ${L.n}명이라 ${L.friNeed - L.n}명은 2회째가 불가피` : '';
+  return {cls: p.fri >= 2 && !friOver ? 't-bad' : 't-warn', text: why.join(', '), why: '사유: ' + ([friWhy, reason].filter(Boolean).join(' · ') || '같은 장소 인원 대비 운영일 수 차이')};
+}
+function fairnessAoa(){
+  const S = computeStats(duty); const rows = [['장소','이름','평일 횟수','장소 평균','금요일','주말·특별','직접 지정','설정된 조건','판정','근무 일자']];
+  duty.teachers.slice().sort((a, b) => LOCS.indexOf(a.loc) - LOCS.indexOf(b.loc) || a.name.localeCompare(b.name, 'ko')).forEach(t => {
+    const p = S.per[S.key(t.loc, t.name)], L = S.locs[t.loc], v = verdict(t, p, L);
+    const cons = [t.offDays.length ? '요일:' + t.offDays.join(',') : '', t.leaveStart && t.leaveEnd ? `기간:${t.leaveStart}~${t.leaveEnd}` : '', t.prevEnd ? '직전학기말근무' : ''].filter(Boolean).join(' | ');
+    rows.push([LOC_NAME[t.loc], t.name, t.exclude ? '-' : p.wd, +L.avg.toFixed(2), t.exclude ? '-' : p.fri, p.we, p.manual, cons || '없음', v.text + (v.why ? ' / ' + v.why : ''), p.dates.map(md).join(', ')]);
+  });
+  return rows;
+}
+function exportFairness(){
+  const S = computeStats(duty);
+  const sum = [['자기주도학습 감독 배정 공정성 검증표'], [`학기 ${duty.settings.start} ~ ${duty.settings.end} · 배정 번호 ${duty.meta.seed || '-'} · 배정 ${duty.meta.generatedAt ? new Date(duty.meta.generatedAt).toLocaleString('ko-KR') : '-'}`], [],
+    ['장소','운영 종료일','운영일','배정 감독 수','1인당 평균','최소','최대','최대 편차','금요일 최다','미배정일'],
+    ...LOCS.map(l => { const L = S.locs[l]; return [LOC_NAME[l], duty.settings.ends[l], L.need, L.n, +L.avg.toFixed(2), L.min, L.max, L.max - L.min, L.friMax, L.none]; }), [],
+    ['배정 원칙'], ...RULES.map((r, i) => [`${i+1}. ${r}`])];
+  saveXlsx('자기주도학습_공정성검증표.xlsx', [['요약', sum, [22,12,8,9,10,6,6,9,10,8]], ['교사별', fairnessAoa(), [20,10,9,9,7,9,9,30,40,80]]]);
+}
+const RULES = [
+  '교사는 자신이 속한 장소의 명단 안에서만 배정합니다. 근무 제외(교문지도·급식 등) 교사는 빠집니다.',
+  '근무 불가 요일과 불가 기간(병가·경조사)에 해당하는 교사는 그날 후보에서 뺍니다.',
+  '금요일 근무는 1인당 최대 1회입니다. 금요일에는 아직 금요일 근무가 없는 교사만 후보가 되고, 운영 금요일 수가 배정 인원보다 많은 장소에서만 2회째가 생기며 그 경우도 누적 횟수가 가장 적은 교사에게 돌아갑니다.',
+  '그다음 학기 누적 평일 근무 횟수가 가장 적은 교사를 고릅니다.',
+  '횟수가 같으면 마지막 근무일이 가장 오래된 교사를 고르고, 지난 학기 말에 근무한 교사는 학기 초에 뒤로 밉니다.',
+  '그래도 같으면 무작위로 정하되, 배정 번호(시드)가 같으면 언제 다시 실행해도 같은 결과가 나옵니다.',
+  '휴업일·장소별 운영 종료일 이후와 주말은 배정하지 않습니다. 주말·특별 근무는 신청자를 지정하며 평일 횟수와 따로 셉니다.'
+];
+function renderFairness(){
+  const S = computeStats(duty);
+  const f = ui.fairLoc;
+  const list = duty.teachers.filter(t => f === 'ALL' || t.loc === f).slice().sort((a, b) => LOCS.indexOf(a.loc) - LOCS.indexOf(b.loc) || a.name.localeCompare(b.name, 'ko'));
+  const maxWd = Math.max(1, ...duty.teachers.map(t => S.per[S.key(t.loc, t.name)].wd));
+  const hasWe = duty.specials.length > 0;
+  const rows = list.map(t => {
+    const p = S.per[S.key(t.loc, t.name)], L = S.locs[t.loc], v = verdict(t, p, L);
+    const cons = [t.offDays.length ? `요일 ${t.offDays.join('·')}` : '', t.leaveStart && t.leaveEnd ? `${md(t.leaveStart)}~${md(t.leaveEnd)}` : '', t.prevEnd ? '지난 학기 말 근무' : ''].filter(Boolean).join(' · ');
+    return `<tr><td class="l"><span class="loc ${t.loc}">${LOC_SHORT[t.loc]}</span></td><td class="l"><b>${esc(t.name)}</b></td>
+      <td class="n">${t.exclude ? '–' : `<b>${p.wd}</b>회`}</td>
+      <td style="min-width:150px">${t.exclude ? '' : `<div class="bar" title="평균 ${L.avg.toFixed(2)}회"><i style="width:${p.wd / maxWd * 100}%"></i><b style="left:${L.avg / maxWd * 100}%"></b></div>`}</td>
+      <td class="n">${t.exclude ? '–' : p.fri + '회'}</td>${hasWe ? `<td class="n">${p.we}회</td>` : ''}
+      <td class="small">${cons || '<span class="muted">없음</span>'}</td>
+      <td class="l"><span class="tag ${v.cls}">${esc(v.text)}</span>${v.why ? `<div class="tiny muted" style="margin-top:3px">${esc(v.why)}</div>` : ''}</td>
+      <td><div class="datelist">${p.dates.map(d => `<span style="${dowOf(d)===5?'color:var(--warn);font-weight:600':''}">${md(d)}</span>`).join(' ')}</div></td></tr>`;
+  }).join('');
+  const segBtn = (k, l) => `<button type="button" aria-pressed="${f === k}" onclick="ui.fairLoc='${k}';saveUi();render()">${l}</button>`;
+  return `<div class="stack">
+    <div class="grid g-2">
+      <section class="panel"><div class="ph"><h2>배정 원칙</h2><span class="tag t-mute">배정 번호 <span class="num">${duty.meta.seed || '–'}</span></span></div>
+        <ol class="rules">${RULES.map(r => `<li>${r}</li>`).join('')}</ol>
+        <p class="tiny muted" style="margin:10px 0 0">${duty.meta.generatedAt ? `마지막 배정: ${new Date(duty.meta.generatedAt).toLocaleString('ko-KR')}` : ''}</p></section>
+      <section class="panel"><div class="ph"><h2>검증 요약</h2><span class="spacer"></span><button class="btn sm" onclick="exportFairness()">Excel로 내보내기</button></div>
+        ${recommendNote(S) || ''}
+        <div style="margin-top:12px">${locSummaryTable(S)}</div>
+        <p class="tiny muted" style="margin:8px 0 0">최대 편차 = 같은 장소에서 가장 많이 한 교사와 가장 적게 한 교사의 평일 횟수 차이. 1회 이하면 운영일을 인원으로 나눌 때 생기는 나머지 수준입니다.</p></section>
+    </div>
+    <section class="panel"><div class="ph"><h2>교사별 근무 횟수와 판정</h2><span class="spacer"></span><div class="seg">${segBtn('ALL','전체')}${LOCS.map(l => segBtn(l, LOC_SHORT[l])).join('')}</div></div>
+      <div class="tw tall"><table><thead><tr><th class="l">장소</th><th class="l">이름</th><th>평일</th><th>평균 대비 <span class="tiny muted">(세로선 = 장소 평균)</span></th><th>금요일</th>${hasWe ? '<th>주말·특별</th>' : ''}<th>설정된 조건</th><th class="l">판정</th><th class="l">근무 일자 <span class="tiny" style="color:var(--warn)">주황 = 금요일</span></th></tr></thead><tbody>${rows}</tbody></table></div></section>
+  </div>`;
+}
 
-    function executeBulkDelete() {
-      const start = document.getElementById('deleteStartDate').value;
-      const end = document.getElementById('deleteEndDate').value;
-
-      if (!start || !end) {
-        alert('삭제할 기간을 정확히 선택해 주세요.');
-        return;
-      }
-
-      if (start > end) {
-        alert('시작일이 종료일보다 늦을 수 없습니다.');
-        return;
-      }
-
-      if (confirm(`${start} ~ ${end} 기간의 데이터를 정말로 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.`)) {
-        Object.keys(dbData).forEach(date => {
-          if (date >= start && date <= end) {
-            delete dbData[date];
-          }
-        });
-        saveAndRefresh();
-        bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal')).hide();
-        alert('선택한 기간의 데이터가 일괄 삭제(초기화)되었습니다.');
-      }
-    }
-
-    function saveAndRefresh() {
-      localStorage.setItem(DB_KEY, JSON.stringify(dbData));
-      calendar.removeAllEvents();
-      calendar.addEventSource(getCalendarEvents());
-      updateAllViews();
-      if(isAdmin) renderAdminTable();
-    }
-
-    // --- 뷰 & 차트 업데이트 ---
-    function updateAllViews() {
-      renderSummaryTable();
-      renderChart();
-    }
-
-    function renderSummaryTable() {
-      const tbody = document.getElementById('summaryTableBody');
-      tbody.innerHTML = '';
-      const dates = Object.keys(dbData).sort().reverse();
-
-      if(dates.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-muted">등록된 데이터가 없습니다.</td></tr>';
-        return;
-      }
-
-      dates.forEach(date => {
-        const item = dbData[date];
-        const tr = document.createElement('tr');
-        if (item.reason) {
-          tr.innerHTML = `
-            <td><strong>${date}</strong></td>
-            <td colspan="4" class="text-danger fw-bold">[특이사항] ${item.reason}</td>
-          `;
-        } else {
-          const totAtt = (item.g1?.attend||0) + (item.g2?.attend||0) + (item.g3?.attend||0);
-          const totApp = (item.g1?.apply||0) + (item.g2?.apply||0) + (item.g3?.apply||0);
-          tr.innerHTML = `
-            <td>${date}</td>
-            <td>${item.g1?.attend||0} / ${item.g1?.apply||0}</td>
-            <td>${item.g2?.attend||0} / ${item.g2?.apply||0}</td>
-            <td>${item.g3?.attend||0} / ${item.g3?.apply||0}</td>
-            <td class="fw-bold text-primary">${totAtt} / ${totApp}</td>
-          `;
-        }
-        tbody.appendChild(tr);
-      });
-    }
-
-    function initChart() {
-      const ctx = document.getElementById('studyChart').getContext('2d');
-      chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: [],
-          datasets: [
-            { label: '1학년 참여', data: [], backgroundColor: '#f59e0b' }, // 노랑
-            { label: '2학년 참여', data: [], backgroundColor: '#10b981' }, // 초록
-            { label: '3학년 참여', data: [], backgroundColor: '#3b82f6' }  // 파랑
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: { beginAtZero: true }
-          }
-        }
-      });
-    }
-
-    function renderChart() {
-      const dates = Object.keys(dbData).sort().slice(-7);
-      const labels = [];
-      const g1Data = [], g2Data = [], g3Data = [];
-
-      dates.forEach(d => {
-        if (!dbData[d].reason) {
-          labels.push(d.slice(5));
-          g1Data.push(dbData[d].g1?.attend || 0);
-          g2Data.push(dbData[d].g2?.attend || 0);
-          g3Data.push(dbData[d].g3?.attend || 0);
-        }
-      });
-
-      chartInstance.data.labels = labels;
-      chartInstance.data.datasets[0].data = g1Data;
-      chartInstance.data.datasets[1].data = g2Data;
-      chartInstance.data.datasets[2].data = g3Data;
-      chartInstance.update();
-    }
-
-    function renderAdminTable() {
-      const tbody = document.getElementById('adminDataTableBody');
-      tbody.innerHTML = '';
-      const dates = Object.keys(dbData).sort().reverse();
-
-      dates.forEach(date => {
-        const item = dbData[date];
-        const tr = document.createElement('tr');
-        const isEvent = !!item.reason;
-        
-        let desc = isEvent ? item.reason : `1학년(${item.g1?.attend}/${item.g1?.apply}), 2학년(${item.g2?.attend}/${item.g2?.apply}), 3학년(${item.g3?.attend}/${item.g3?.apply})`;
-
-        tr.innerHTML = `
-          <td>${date}</td>
-          <td><span class="badge ${isEvent ? 'bg-danger' : 'bg-success'}">${isEvent ? '특이사항' : '자습기록'}</span></td>
-          <td class="text-start">${desc}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-primary me-1" onclick="openDataModal('${date}')">수정</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteEntry('${date}')">삭제</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // --- 엑셀 내보내기 ---
-    function openExportModal() {
-      const modal = new bootstrap.Modal(document.getElementById('exportModal'));
-      setExportRange('week');
-      modal.show();
-    }
-
-    function setExportRange(type) {
-      const end = new Date();
-      const start = new Date();
-      if (type === 'week') {
-        start.setDate(end.getDate() - 7);
-      } else if (type === 'month') {
-        start.setMonth(end.getMonth() - 1);
-      }
-      document.getElementById('exportStartDate').value = start.toISOString().split('T')[0];
-      document.getElementById('exportEndDate').value = end.toISOString().split('T')[0];
-    }
-
-    function exportToExcel() {
-      const start = document.getElementById('exportStartDate').value;
-      const end = document.getElementById('exportEndDate').value;
-
-      if (!start || !end) {
-        alert('기간을 선택해 주세요.');
-        return;
-      }
-
-      const rows = [
-        ["자기주도학습 현황 보고서"],
-        [`조회 기간: ${start} ~ ${end}`],
-        []
-      ];
-
-      rows.push(["날짜", "학년", "신청인원", "참여인원", "특이사항 및 사유"]);
-
-      Object.keys(dbData).sort().forEach(date => {
-        if (date >= start && date <= end) {
-          const d = dbData[date];
-          if (d.reason) {
-            rows.push([date, "전체", "-", "-", d.reason]);
-          } else {
-            rows.push([date, "1학년", d.g1?.apply || 0, d.g1?.attend || 0, "-"]);
-            rows.push([date, "2학년", d.g2?.apply || 0, d.g2?.attend || 0, "-"]);
-            rows.push([date, "3학년(남)", d.g3?.m_apply || 0, d.g3?.m_attend || 0, "-"]);
-            rows.push([date, "3학년(여)", d.g3?.f_apply || 0, d.g3?.f_attend || 0, "-"]);
-            rows.push([date, "3학년(합계)", d.g3?.apply || 0, d.g3?.attend || 0, "-"]);
-          }
-        }
-      });
-
-      const worksheet = XLSX.utils.aoa_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "자습현황보고");
-      XLSX.writeFile(workbook, `자기주도학습현황_${start}_${end}.xlsx`);
-
-      bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
-    }
-  </script>
+updateMode();
+initBackend();
+</script>
 </body>
 </html>
