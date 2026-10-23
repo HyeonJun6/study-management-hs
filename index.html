@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" onerror="var x=document.createElement('script');x.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';document.head.appendChild(x)"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -367,7 +368,7 @@ function computeStats(duty){
 /* ---------- 기본 데이터 (관리자 '기본값 불러오기' 및 오프라인 사용 시) ---------- */
 const DEFAULT_ROSTER = {
   DORM:'강래명*교문지도,김기완*교문지도,이지호,박철규,안정애,김성호^,정혜섭,이태영,정주영,김수연,이경민,김승권,신지현,정광진,방형협,최종문,송제택,이우선,윤혜경,유석만,이승영,임준,백승혁,박정기*교문지도,임태관*교문지도,황현지*교문지도',
-  STUDY_12:'조정혜,노정은,이은재,정소은,윤해님,오송이,정은영,김보경,지정민,김가영,배현주,임은실,정혜진,김소연,정다운,박신영,김유미,서승안*교문지도,이미정*교문지도,이재현*교문지도',
+  STUDY_12:'조정혜,노정은,이은재,정소은,윤해님,오송이,정은영,김보경,지정민,김가영,배현주,임은실,정혜진,김소연,정다운,박신영,김유미,서승안*교문지도,이미정*급식,이재현*교문지도',
   STUDY_3:'박수선,김양현,권희진,박보라,박은혜,장금주,이영민,김성현,김병준,신현준,박지원,홍현선*교문지도,김대현*교문지도'
 };
 function defaultDuty(){
@@ -378,16 +379,62 @@ function defaultDuty(){
     if (name.includes('*')){ [name, exclude] = name.split('*'); }
     teachers.push({id:id++, name, loc, exclude, offDays:[], prevEnd, leaveStart:'', leaveEnd:''});
   }));
-  const S3 = ['STUDY_12','STUDY_3'], A = ['ALL'];
-  const H = [['2026-08-19','개학식',S3],['2026-09-02','전국연합학력평가(1,2) 대수능모의평가(3)',S3],['2026-09-23','추석연휴',A],['2026-09-24','추석연휴',A],['2026-09-25','추석연휴',A],['2026-10-05','대체공휴일',A],
-    ['2026-10-07','1차 정기시험',S3],['2026-10-08','1차 정기시험',S3],['2026-10-09','한글날',S3],['2026-10-12','1차 정기시험',S3],['2026-10-13','1차 정기시험',S3],['2026-10-20','전국연합학력평가',S3],
-    ['2026-11-18','예비소집일',A],['2026-11-19','대학수학능력시험',A],['2026-11-20','재량휴업일',A],['2026-12-14','2차 정기시험',S3],['2026-12-15','2차 정기시험',S3],['2026-12-16','2차 정기시험',S3],['2026-12-17','2차 정기시험',S3],['2026-12-18','2차 정기시험',A],
-    ['2026-12-24','동아리발표',A],['2026-12-25','성탄절',A],['2026-12-31','새벽별축제',A],['2027-01-01','신정',A],['2027-01-08','종업식, 졸업식',A]];
+  const H = APPROVED.holidays;
   return {
-    settings:{term:'2학기', start:'2026-08-19', end:'2027-01-08', ends:{DORM:'2027-01-08', STUDY_12:'2027-01-08', STUDY_3:'2026-11-17'}, pin:'1954'},
+    settings:{term:'2학기', start:'2026-08-19', end:'2027-01-08', ends:{DORM:'2027-01-08', STUDY_12:'2027-01-08', STUDY_3:APPROVED.ends.STUDY_3}, pin:'1954'},
     holidays: H.map(([date, reason, locs]) => ({id:id++, date, reason, locs:[...locs]})),
     teachers, specials:[], schedule:[], meta:{}, nextId: id + 10
   };
+}
+
+/* ---------- 2026학년도 2학기 결재본 (2026. 8. 19. 결재, 수기 작성) ---------- */
+const APPROVED = (() => {
+  const S3 = ['STUDY_12','STUDY_3'], A = ['ALL'], T = ['STUDY_3'];
+  return {
+    label: '2026학년도 2학기 결재본', approvedAt: '2026-08-19T13:55:00+09:00', start: '2026-08-19', end: '2027-01-08',
+    ends: {DORM:'2027-01-08', STUDY_12:'2027-01-08', STUDY_3:'2026-11-13'},
+    holidays: [['2026-08-19','개학식',S3],['2026-09-02','전국연합학력평가(1,2) 대수능모의평가(3)',S3],['2026-09-23','추석연휴',A],['2026-09-24','추석연휴',A],['2026-09-25','추석',A],['2026-10-05','대체공휴일',A],
+      ['2026-10-07','1차 정기시험',S3],['2026-10-08','1차 정기시험',S3],['2026-10-09','한글날',S3],['2026-10-12','1차 정기시험',S3],['2026-10-13','1차 정기시험',S3],['2026-10-20','전국연합학력평가',S3],
+      ['2026-11-18','예비소집일',A],['2026-11-19','대학수학능력시험',A],['2026-11-20','재량휴업일',A],
+      ['2026-11-24','2차 정기시험(3)',T],['2026-11-25','2차 정기시험(3)',T],['2026-11-26','2차 정기시험(3)',T],['2026-11-27','2차 정기시험(3)',T],['2026-11-30','2차 정기시험(3)',T],['2026-12-02','현장체험학습(3)',T],
+      ['2026-12-14','2차 정기시험(1,2)',S3],['2026-12-15','2차 정기시험(1,2)',S3],['2026-12-16','2차 정기시험(1,2)',S3],['2026-12-17','2차 정기시험(1,2)',S3],['2026-12-18','2차 정기시험(1,2)',A],
+      ['2026-12-24','동아리발표회',A],['2026-12-25','성탄절',A],['2026-12-31','새벽별축제',A],['2027-01-01','신정',A],['2027-01-08','종업식, 졸업식',A]],
+    wish: ["2026-10-10", "2026-10-11", "2026-12-12", "2026-12-13"],
+    rows: '2026-08-19,이지호,X,X;2026-08-20,박철규,김소연,박수선;2026-08-21,안정애,임은실,김양현;2026-08-24,김성호,배현주,권희진;2026-08-25,정혜섭,지정민,박보라;2026-08-26,이태영,김보경,박은혜;2026-08-27,정주영,정은영,장금주;2026-08-28,김수연,오송이,이영민;2026-08-31,이경민,윤해님,김성현;2026-09-01,김승권,정소은,김병준;2026-09-02,신지현,X,X;2026-09-03,정광진,이은재,신현준;2026-09-04,박철규,노정은,박지원;2026-09-07,방형협,조정혜,박수선;2026-09-08,최종문,김유미,김양현;2026-09-09,송제택,박신영,권희진;2026-09-10,이우선,정다운,박보라;2026-09-11,김성호,김소연,박은혜;2026-09-14,윤혜경,정혜진,장금주;2026-09-15,유석만,임은실,이영민;2026-09-16,이승영,배현주,김성현;2026-09-17,임준,김가영,김병준;2026-09-18,이지호,지정민,신현준;2026-09-21,백승혁,김보경,박지원;2026-09-22,김수연,정은영,박수선;2026-09-23,X,X,X;2026-09-24,X,X,X;2026-09-25,X,X,X;2026-09-28,안정애,오송이,김양현;2026-09-29,이태영,윤해님,권희진;2026-09-30,정혜섭,정소은,박보라;2026-10-01,김성호,이은재,박은혜;2026-10-02,백승혁,조정혜,장금주;2026-10-05,X,X,X;2026-10-06,정광진,김유미,이영민;2026-10-07,송제택,X,X;2026-10-08,이지호,X,X;2026-10-09,김수연,X,X;2026-10-12,김수연,X,X;2026-10-13,안정애,X,X;2026-10-14,유석만,노정은,김성현;2026-10-15,이경민,박신영,신현준;2026-10-16,임준,정다운,김병준;2026-10-19,김승권,김소연,박지원;2026-10-20,정주영,X,X;2026-10-21,정광진,정혜진,박수선;2026-10-22,방형협,임은실,김양현;2026-10-23,이승영,배현주,권희진;2026-10-26,최종문,김가영,박보라;2026-10-27,이우선,지정민,박은혜;2026-10-28,윤혜경,김보경,장금주;2026-10-29,신지현,정은영,이영민;2026-10-30,송제택,윤해님,김성현;2026-11-02,백승혁,오송이,김병준;2026-11-03,임준,정소은,신현준;2026-11-04,이승영,노정은,박지원;2026-11-05,이지호,이은재,김양현;2026-11-06,유석만,김유미,박수선;2026-11-09,김수연,조정혜,권희진;2026-11-10,안정애,박신영,이영민;2026-11-11,박철규,정다운,박은혜;2026-11-12,김성호,김소연,장금주;2026-11-13,이우선,정혜진,박보라;2026-11-16,정혜섭,임은실,X;2026-11-17,최종문,배현주,X;2026-11-18,X,X,X;2026-11-19,X,X,X;2026-11-20,X,X,X;2026-11-23,정주영,김가영,X;2026-11-24,방형협,지정민,X;2026-11-25,김승권,김보경,X;2026-11-26,신지현,오송이,X;2026-11-27,윤혜경,정은영,X;2026-11-30,정광진,윤해님,X;2026-12-01,이경민,정소은,X;2026-12-02,이태영,노정은,X;2026-12-03,임준,이은재,X;2026-12-04,최종문,박신영,X;2026-12-07,백승혁,조정혜,X;2026-12-08,유석만,김유미,X;2026-12-09,이승영,정다운,X;2026-12-10,이우선,정혜진,X;2026-12-11,방형협,김가영,X;2026-12-14,안정애,X,X;2026-12-15,김수연,X,X;2026-12-16,이지호,X,X;2026-12-17,송제택,X,X;2026-12-18,X,X,X;2026-12-21,윤혜경,정혜진,X;2026-12-22,박철규,임은실,X;2026-12-23,김성호,이은재,X;2026-12-24,X,X,X;2026-12-25,X,X,X;2026-12-28,정혜섭,김가영,X;2026-12-29,이태영,지정민,X;2026-12-30,정주영,김보경,X;2026-12-31,X,X,X;2027-01-01,X,X,X;2027-01-04,이경민,정은영,X;2027-01-05,김승권,오송이,X;2027-01-06,신지현,윤해님,X;2027-01-07,백승혁,정소은,X;2027-01-08,X,X,X'
+  };
+})();
+/* 결재본을 d(학사일정·명단·배정표 묶음)에 그대로 적용한다. 명단은 지우지 않고 빠진 교사만 더한다. */
+function applyApprovedTo(d){
+  d.settings = Object.assign({}, d.settings, {term: d.settings.term || '2학기', start: APPROVED.start, end: APPROVED.end});
+  d.settings.ends = Object.assign({}, d.settings.ends, APPROVED.ends);
+  d.holidays = APPROVED.holidays.map(([date, reason, locs]) => ({id: d.nextId++, date, reason, locs: [...locs]}));
+  const base = defaultDuty().teachers;
+  base.forEach(b => {
+    const t = d.teachers.find(x => x.name === b.name);
+    if (!t) d.teachers.push(Object.assign({}, b, {id: d.nextId++}));
+    else if (b.exclude && t.exclude !== b.exclude && (b.exclude === '급식' || !t.exclude)) t.exclude = b.exclude;
+  });
+  const rows = APPROVED.rows.split(';').map(x => {
+    const [date, a, b, c] = x.split(','), w = dowOf(date);
+    return {date, w, wk: w === 0 || w === 6, c: {DORM: a, STUDY_12: b, STUDY_3: c}, sp: {}, m: {}, note: ''};
+  });
+  rows.forEach(r => LOCS.forEach(l => { const v = r.c[l]; if (isName(v) && !d.teachers.some(t => t.name === v && t.loc === l)){ const t = d.teachers.find(x => x.name === v); if (t) t.loc = l; else d.teachers.push({id: d.nextId++, name: v, loc: l, exclude: '', offDays: [], prevEnd: false, leaveStart: '', leaveEnd: ''}); } }));
+  APPROVED.wish.forEach(date => { if (!d.specials.some(s => s.date === date && s.loc === 'DORM')) d.specials.push({date, loc: 'DORM', note: '추후 희망자 선발 예정', assigned: ''}); });
+  d.specials.filter(sp => sp.date >= APPROVED.start && sp.date <= APPROVED.end).forEach(sp => {
+    let r = rows.find(x => x.date === sp.date);
+    if (!r){ const w = dowOf(sp.date); r = {date: sp.date, w, wk: w === 0 || w === 6, c: {DORM: 'X', STUDY_12: 'X', STUDY_3: 'X'}, sp: {}, m: {}, note: ''}; rows.push(r); }
+    r.sp[sp.loc] = true; r.c[sp.loc] = sp.assigned || '';
+  });
+  rows.sort((a, b) => a.date.localeCompare(b.date));
+  rows.forEach(r => {
+    r.note = holidayNote(d, r.date);
+    const sp = d.specials.find(x => x.date === r.date && r.sp[x.loc]);
+    if (sp && sp.note && !r.note) r.note = sp.note;
+  });
+  d.schedule = rows;
+  d.meta = {seed: '결재본', source: APPROVED.label, generatedAt: Date.parse(APPROVED.approvedAt), appliedAt: Date.now()};
+  d.meta.sig = sigOf(d);
+  return d;
 }
 
 /* ---------- 상태 ---------- */
@@ -486,7 +533,7 @@ async function initBackend(){
   } else {
     backend = 'local';
     duty = normalizeDuty(lsGet(LS.duty)) || defaultDuty();
-    if (!duty.schedule.length){ duty.meta = {seed: 20260819, generatedAt: Date.now(), sig: sigOf(duty)}; duty.schedule = generateSchedule(duty, 'ALL', 20260819); }
+    if (!duty.schedule.length) applyApprovedTo(duty);
     study = lsGet(LS.study) || {}; loaded = {duty:true, study:true};
     setSync('saved', '오프라인 — 이 브라우저에만 저장됨'); render();
   }
@@ -679,8 +726,7 @@ async function createFirstAdmin(){
 }
 async function loadDefaults(){
   if (!needAdmin()) return;
-  duty = defaultDuty(); duty.meta = {seed: 20260819, generatedAt: Date.now(), sig: sigOf(duty)};
-  duty.schedule = generateSchedule(duty, 'ALL', 20260819); saveDuty(); render(); toast('기본 명단과 학기 일정을 불러오고 배정을 완료했습니다.');
+  duty = applyApprovedTo(defaultDuty()); saveDuty(); render(); toast('기본 명단과 2학기 결재본 배정표를 불러왔습니다.');
 }
 let afterRender = () => {};
 
@@ -998,7 +1044,8 @@ function studyRows(start, end){
   });
   return rows;
 }
-function exportWeek(){
+function exportWeek(){ const m0 = ui.week; xRun('주간 보고', () => xlsWeek(m0), exportWeekPlain); }
+function exportWeekPlain(){
   const mon = ui.week, end = addD(mon, 4), sm = schedMap();
   const sum = [['자기주도학습 주간 보고'], [`${weekLabel(mon)} (${mon} ~ ${end})`], [],
     ['날짜','요일','감독(기숙사)','감독(1·2자습실)','감독(3학년실)','1학년 신청','1학년 참여','2학년 신청','2학년 참여','3학년 남 신청','3학년 남 참여','3학년 여 신청','3학년 여 참여','3학년 신청','3학년 참여','전체 신청','전체 참여','참여율(%)','특이사항']];
@@ -1031,7 +1078,7 @@ function doExport(){
   const s = document.getElementById('exS').value, e = document.getElementById('exE').value;
   if (!s || !e || s > e){ toast('기간을 올바르게 선택하세요.', true); return; }
   const rows = [['자기주도학습 현황 보고서'], [`조회 기간: ${s} ~ ${e}`], [], ...studyRows(s, e)];
-  closeModal(); saveXlsx(`자기주도학습현황_${s}_${e}.xlsx`, [['자습현황보고', rows, [12,5,12,9,9,8,22]]]);
+  closeModal(); xRun('참여 현황', () => xlsStudy(s, e), () => saveXlsx(`자기주도학습현황_${s}_${e}.xlsx`, [['자습현황보고', rows, [12,5,12,9,9,8,22]]]));
 }
 function openBulkDelete(){
   if (!needAdmin()) return;
@@ -1072,12 +1119,14 @@ function scheduleHTML(){
     }).join('');
     return `<tr class="${cls}"><td class="n">${ms ? d.getMonth()+1 : ''}</td><td class="n">${d.getDate()}</td><td style="${r.w===0?'color:var(--bad)':r.w===6?'color:var(--g3)':''}">${DOW[r.w]}</td>${cells}<td class="l small">${esc(r.note || '')}</td></tr>`;
   }).join('');
-  return `${recommendNote(S)}
+  const fromApproved = duty.meta && duty.meta.source === APPROVED.label;
+  const approvedNote = isAdmin && !fromApproved && duty.settings.start === APPROVED.start ? `<div class="note info"><p><b>결재받은 2학기 배정표(2026. 8. 19.)를 그대로 불러올 수 있습니다.</b> 적용하면 배정표 107일, 휴업일, 3학년 자습실 운영 종료일(11. 13.), 주말 희망자 근무일 4건이 결재본과 같아집니다. 교사 명단은 지우지 않습니다.</p><p><button class="btn sm primary" onclick="applyApproved()">결재본 적용</button></p></div>` : '';
+  return `${approvedNote}${recommendNote(S)}
     ${stale ? `<div class="note"><p><b>배정 이후 학사일정이나 교사 조건이 바뀌었습니다.</b> 바뀐 내용을 반영하려면 다시 배정하세요. (지금 배정표는 바뀌기 전 기준입니다)</p></div>` : ''}
     <section class="panel">
       <div class="ph"><div class="row"><button class="btn primary" onclick="confirmGen('ALL')" ${dis()}>전체 장소 다시 배정</button>${LOCS.map(locBtn).join('')}</div>
         <div class="row"><button class="btn" onclick="exportScheduleXlsx()">Excel로 내보내기</button><button class="btn" onclick="exportCSV()">CSV로 내보내기</button></div></div>
-      <p class="small muted" style="margin:0 0 8px">${duty.schedule.length}일 · ${duty.meta && duty.meta.generatedAt ? `마지막 배정 ${new Date(duty.meta.generatedAt).toLocaleString('ko-KR')} · 배정 번호(시드) <span class="num">${duty.meta.seed}</span>` : '아직 배정하지 않았습니다'}${isAdmin ? ' · 특정 날짜에 교사를 먼저 정하려면 칸에서 교사를 고르세요. <span class="manual">지정</span> 칸은 다시 배정할 때 유지하고 나머지만 공정하게 채울 수 있으며, 검증표에도 남습니다.' : ''}</p>
+      <p class="small muted" style="margin:0 0 8px">${duty.schedule.length}일 · ${fromApproved ? `<b>${APPROVED.label} 기준</b> (2026. 8. 19. 결재)` : duty.meta && duty.meta.generatedAt ? `마지막 배정 ${new Date(duty.meta.generatedAt).toLocaleString('ko-KR')} · 배정 번호(시드) <span class="num">${duty.meta.seed}</span>` : '아직 배정하지 않았습니다'}${isAdmin ? ' · 특정 날짜에 교사를 먼저 정하려면 칸에서 교사를 고르세요. <span class="manual">지정</span> 칸은 다시 배정할 때 유지하고 나머지만 공정하게 채울 수 있으며, 검증표에도 남습니다.' : ''}</p>
       ${duty.schedule.length ? `<div class="tw tall"><table><thead><tr><th>월</th><th>일</th><th>요일</th><th><span class="loc DORM">기숙사</span></th><th><span class="loc STUDY_12">여학생정독실·1,2자습실</span></th><th><span class="loc STUDY_3">3학년 자습실</span></th><th class="l">비고</th></tr></thead><tbody>${rows}</tbody></table></div>`
         : `<div class="empty"><h3>배정표가 비어 있습니다</h3><p>관리자 로그인 후 <b>전체 장소 다시 배정</b>을 누르면 학기 전체 배정표가 만들어집니다.</p></div>`}
     </section>`;
@@ -1089,6 +1138,7 @@ async function confirmGen(target){
   const keep = await new Promise(res => {
     openModal(`<h3>${esc(name)} 다시 배정</h3>
       <p class="muted" style="margin:0">${esc(name)}의 평일 감독을 배정 원칙에 따라 새로 정합니다. 주말·특별 근무 지정은 그대로 둡니다.</p>
+      ${duty.meta && duty.meta.source === APPROVED.label ? '<div class="note"><p><b>지금 배정표는 결재받은 배정표입니다.</b> 다시 배정하면 결재본과 달라집니다. 되돌리려면 이 탭의 결재본 적용을 다시 누르세요.</p></div>' : ''}
       ${manual ? `<div class="box"><h4>직접 지정한 칸 ${manual}개를 어떻게 할까요?</h4>
         <label class="chk" style="white-space:normal;align-items:flex-start;padding:8px 10px"><input type="radio" name="genKeep" value="keep" checked style="margin-top:3px"> <span><b>유지하고 나머지만 공정하게 배정</b> (권장)<br><span class="small muted">지정한 교사의 횟수·금요일 횟수를 먼저 세고, 남은 칸을 그만큼 덜 배정해 전체 균형을 맞춥니다.</span></span></label>
         <label class="chk" style="white-space:normal;align-items:flex-start;padding:8px 10px"><input type="radio" name="genKeep" value="over" style="margin-top:3px"> <span><b>모두 새로 배정</b> (지정한 칸 덮어쓰기)</span></label></div>`
@@ -1166,7 +1216,7 @@ function exportCSV(){
 }
 function exportScheduleXlsx(){
   if (!duty.schedule.length){ toast('먼저 배정을 실행하세요.', true); return; }
-  saveXlsx('자기주도학습_감독배정표.xlsx', [['감독배정표', scheduleRowsAoa(), [5,5,5,12,20,12,24]], ['교사별 검증', fairnessAoa(), [14,10,10,10,8,8,8,30,16,60]]]);
+  xRun('감독 배정표', xlsSchedule, () => saveXlsx('자기주도학습_감독배정표.xlsx', [['감독배정표', scheduleRowsAoa(), [5,5,5,12,20,12,24]], ['교사별 검증', fairnessAoa(), [14,10,10,10,8,8,8,30,16,60]]]));
 }
 
 function locChecks(name){ return `<div class="row" style="gap:6px">${['ALL', ...LOCS].map(l => `<label class="chk"><input type="checkbox" name="${name}" value="${l}" ${l === 'ALL' ? 'checked' : ''} onchange="locToggle('${name}',this)" ${dis()}> ${LOC_NAME[l]}</label>`).join('')}</div>`; }
@@ -1257,7 +1307,7 @@ function teachersHTML(){
       <td><button class="btn sm danger" onclick="tDel(${t.id})" ${dis()}>삭제</button></td></tr>`;
   }).join('');
   const missing = rosterMissing();
-  const upd = missing.length && isAdmin ? `<div class="note info"><p><b>새 명단에 있는 교사 ${missing.length}명이 아직 등록되지 않았습니다:</b> ${missing.map(m => `${esc(m.name)}(${LOC_SHORT[m.loc]})`).join(', ')}</p><p>근무 상태는 <b>제외 · 교문지도</b>로 들어가므로 기존 배정표와 횟수는 바뀌지 않습니다. <button class="btn sm primary" onclick="applyRoster()">${missing.length}명 추가</button></p></div>` : '';
+  const upd = missing.length && isAdmin ? `<div class="note info"><p><b>새 명단에 있는 교사 ${missing.length}명이 아직 등록되지 않았습니다:</b> ${missing.map(m => `${esc(m.name)}(${LOC_SHORT[m.loc]})`).join(', ')}</p><p>근무 상태는 <b>근무 제외</b>(교문지도·급식)로 들어가므로 기존 배정표와 횟수는 바뀌지 않습니다. <button class="btn sm primary" onclick="applyRoster()">${missing.length}명 추가</button></p></div>` : '';
   return `${upd}<section class="panel"><div class="ph"><h2>교사 추가</h2></div>
       <div class="t-add">
         <div class="field"><span>배정 장소</span><select id="ntLoc" ${dis()}>${LOCS.map(l => `<option value="${l}">${LOC_NAME[l]}</option>`).join('')}</select></div>
@@ -1273,6 +1323,11 @@ function teachersHTML(){
       <div class="tw tall"><table><thead><tr><th>배정 장소</th><th>이름</th><th>근무 상태</th><th>지난 학기 말 근무</th><th>근무 불가 요일</th><th>근무 불가 기간</th>${isSuper ? '<th>수정 권한</th>' : ''}<th>관리</th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="tiny muted" style="margin:8px 0 0">'지난 학기 말 근무'를 체크한 선생님은 학기 초 배정에서 뒤로 밀립니다. 조건을 바꾼 뒤에는 배정표 탭에서 다시 배정해야 반영됩니다.</p></section>`;
 }
+async function applyApproved(){
+  if (!needAdmin()) return;
+  if (!await ask('결재본 적용', '지금 배정표와 근무 제외일을 결재받은 2학기 배정표(2026. 8. 19.)로 바꿉니다. 직접 바꾼 칸과 추가한 휴업일도 결재본 기준으로 돌아갑니다. 교사 명단과 참여 현황 기록은 그대로 둡니다.', '결재본 적용')) return;
+  applyApprovedTo(duty); saveDuty(); render(); toast('결재본 배정표를 적용했습니다.');
+}
 function rosterMissing(){
   const d = defaultDuty().teachers;
   return d.filter(x => !duty.teachers.some(t => t.name === x.name));
@@ -1281,7 +1336,7 @@ function applyRoster(){
   if (!needAdmin()) return;
   const m = rosterMissing();
   m.forEach(x => duty.teachers.push({...x, id: duty.nextId++}));
-  saveDuty(); render(); toast(`${m.length}명을 명단에 추가했습니다. (제외 · 교문지도)`);
+  saveDuty(); render(); toast(`${m.length}명을 명단에 추가했습니다. (근무 제외)`);
 }
 function tFind(id){ return duty.teachers.find(t => t.id === id); }
 function tSet(id, k, v){ if (!needAdmin()) return; const t = tFind(id); if (!t) return; t[k] = v; saveDuty(); if (k === 'loc' || k === 'exclude') render(); }
@@ -1336,7 +1391,8 @@ function fairnessAoa(){
   });
   return rows;
 }
-function exportFairness(){
+function exportFairness(){ xRun('공정성 검증표', xlsFairness, exportFairnessPlain); }
+function exportFairnessPlain(){
   const S = computeStats(duty);
   const sum = [['자기주도학습 감독 배정 공정성 검증표'], [`학기 ${duty.settings.start} ~ ${duty.settings.end} · 배정 번호 ${duty.meta.seed || '-'} · 배정 ${duty.meta.generatedAt ? new Date(duty.meta.generatedAt).toLocaleString('ko-KR') : '-'}`], [],
     ['장소','운영 종료일','운영일','배정 감독 수','1인당 평균','최소','최대','최대 편차','금요일 최다','미배정일'],
@@ -1353,6 +1409,452 @@ const RULES = [
   '그래도 같으면 무작위로 정하되, 배정 번호(시드)가 같으면 언제 다시 실행해도 같은 결과가 나옵니다.',
   '휴업일·장소별 운영 종료일 이후와 주말은 배정하지 않습니다. 주말·특별 근무는 신청자를 지정하며 평일 횟수와 따로 셉니다.'
 ];
+
+/* ---------- 서식 있는 Excel 내보내기 (ExcelJS) ---------- */
+const XF = '맑은 고딕';
+const XC = {
+  title:'FF1E6A50', ink:'FF18221C', sub:'FF56635B', mute:'FF8A958E', white:'FFFFFFFF',
+  head:'FFE9EEE8', line:'FFC5CFC4', zebra:'FFF7F9F6',
+  hol:'FFFBE7E4', holInk:'FFAD2A2A', we:'FFFFF3D6', sat:'FF2D5FC0', sun:'FFC0392B',
+  pin:'FFFDE2B8', pinInk:'FF8A4A00', none:'FFF9E2DF', noneInk:'FFAD2A2A',
+  ok:'FFDFF0E3', okInk:'FF24723A', warn:'FFFBEED8', warnInk:'FF9A5208', bad:'FFF9E2DF', badInk:'FFAD2A2A',
+  fri:'FFFFF4DC', out:'FFF1F3F0',
+  loc:{DORM:['FF7C4A96','FFF1E8F6'], STUDY_12:['FF0D7680','FFDDF1F2'], STUDY_3:['FF46529F','FFE4E7F7']},
+  gr:{g1:['FFD08700','FFFBEFD2'], g2:['FF1C8556','FFD9EFE3'], g3:['FF2D5FC0','FFDFE7F8'], all:['FF1E6A50','FFDCEBE3']},
+  mon:{1:['FF6B4FA0','FFEDE8F6'], 2:['FFB5466E','FFF7E3EB'], 3:['FFD0603F','FFFBE6DE'], 4:['FF4C9A2A','FFE6F2DD'], 5:['FF15897F','FFDCF0EE'], 6:['FF2F6DB5','FFE0EAF7'],
+       7:['FF4B4FB0','FFE5E6F7'], 8:['FFC8553D','FFFBE5DF'], 9:['FFB7800A','FFFCF0D4'], 10:['FF3E8E41','FFE2F1E2'], 11:['FF17828F','FFDDF0F2'], 12:['FF2F5FA8','FFE0E8F6']}
+};
+const xReady = () => typeof ExcelJS !== 'undefined' && !!ExcelJS.Workbook;
+const xMonC = ym => XC.mon[+ym.slice(5, 7)];
+const ymLabel = ym => `${ym.slice(0, 4)}년 ${+ym.slice(5, 7)}월`;
+const xDate = ds => `${+ds.slice(5, 7)}. ${+ds.slice(8, 10)}.`;
+function xStamp(){
+  const t = `[${duty.settings.term || '학기'}] ${duty.settings.start.slice(2).replace(/-/g, '.')}~${duty.settings.end.slice(2).replace(/-/g, '.')}`;
+  return `${t}  ·  배정 번호 ${(duty.meta && duty.meta.seed) || '-'}  ·  ${new Date().toLocaleDateString('ko-KR')} 내보냄`;
+}
+function xBorder(color, bottom){
+  const s = () => ({style:'thin', color:{argb: color || XC.line}});
+  return {top:s(), left:s(), right:s(), bottom: bottom ? {style: bottom, color:{argb: XC.sub}} : s()};
+}
+/* 셀 하나에 값과 서식을 넣는다. st: fill, color, bold, italic, size, h, indent, wrap, fmt, bc, noBorder, bottom */
+function xSet(ws, r, c, v, st){
+  st = st || {};
+  const cell = ws.getCell(r, c);
+  if (v !== undefined && v !== null) cell.value = v;
+  cell.font = {name: XF, size: st.size || 10, bold: !!st.bold, italic: !!st.italic, color: {argb: st.color || XC.ink}};
+  if (st.fill) cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb: st.fill}};
+  cell.alignment = {horizontal: st.h || 'center', vertical: 'middle', wrapText: st.wrap !== false, indent: st.indent || 0};
+  if (!st.noBorder) cell.border = xBorder(st.bc, st.bottom);
+  if (st.fmt) cell.numFmt = st.fmt;
+  return cell;
+}
+function xMerge(ws, r1, c1, r2, c2, v, st){
+  for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) xSet(ws, r, c, (r === r1 && c === c1) ? v : undefined, st);
+  if (r1 !== r2 || c1 !== c2) ws.mergeCells(r1, c1, r2, c2);
+}
+function xBook(){ const wb = new ExcelJS.Workbook(); wb.creator = '자기주도학습 통합 관리'; wb.created = new Date(); wb.__names = new Set(); return wb; }
+function xSheet(wb, name, o){
+  o = o || {};
+  let n = name.replace(/[\\\/\?\*\[\]:]/g, '·').slice(0, 31), k = 2;
+  while (wb.__names.has(n)) n = `${name.slice(0, 27)} (${k++})`;
+  wb.__names.add(n);
+  const ws = wb.addWorksheet(n, {
+    properties: Object.assign({defaultRowHeight: 18}, o.tab ? {tabColor: {argb: o.tab}} : {}),
+    views: [o.freeze ? {state:'frozen', ySplit: o.freeze, xSplit: 0, showGridLines: false} : {showGridLines: false}],
+    pageSetup: {paperSize: 9, orientation: o.land ? 'landscape' : 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: o.fitH || 0,
+      horizontalCentered: true, margins: {left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.25}},
+    headerFooter: {oddFooter: '&C&8&P / &N'}
+  });
+  (o.widths || []).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  if (o.print) ws.pageSetup.printTitlesRow = o.print;
+  return ws;
+}
+function xTitle(ws, title, sub, cols, color){
+  xMerge(ws, 1, 1, 1, cols, title, {fill: color || XC.title, color: XC.white, bold: true, size: 15, h: 'left', indent: 1, noBorder: true, wrap: false});
+  ws.getRow(1).height = 34;
+  xMerge(ws, 2, 1, 2, cols, sub, {color: XC.sub, size: 9, h: 'left', indent: 1, noBorder: true, wrap: false});
+  ws.getRow(2).height = 20;
+}
+async function xSave(wb, filename){
+  const buf = await wb.xlsx.writeBuffer();
+  saveFile(filename, new Blob([buf], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+}
+async function xRun(label, build, fallback){
+  if (!xReady()){ toast('서식 모듈을 불러오지 못해 서식 없이 저장합니다. 인터넷 연결을 확인하세요.', true); return fallback(); }
+  try { toast(`${label} Excel 파일을 만드는 중입니다…`); await build(); }
+  catch(e){ console.error(e); toast('서식 적용 중 오류가 나서 서식 없이 저장합니다.', true); fallback(); }
+}
+
+/* 배정 칸 하나: 지정·특별·제외·없음 상태를 색으로 구분 */
+function xDutyCell(ws, r, c, row, l, extra){
+  const v = row.c[l], st = extra || {};
+  if (v === 'X'){
+    if (!row.wk && isLocHoliday(duty, row.date, l)) return xSet(ws, r, c, '근무 제외', Object.assign({fill: XC.hol, color: XC.holInk, italic: true, size: 9}, st));
+    return xSet(ws, r, c, '–', Object.assign({fill: XC.out, color: XC.mute}, st));
+  }
+  if (v === '!') return xSet(ws, r, c, '가능 교사 없음', Object.assign({fill: XC.none, color: XC.noneInk, bold: true, size: 9}, st));
+  if (!v) return xSet(ws, r, c, '미지정', Object.assign({fill: XC.warn, color: XC.warnInk, italic: true, size: 9}, st));
+  if (row.m && row.m[l]) return xSet(ws, r, c, v, Object.assign({fill: XC.pin, color: XC.pinInk, bold: true}, st));
+  if (row.sp && row.sp[l]) return xSet(ws, r, c, v, Object.assign({fill: XC.we, color: XC.ink, bold: true}, st));
+  return xSet(ws, r, c, v, Object.assign({fill: XC.loc[l][1], color: XC.ink}, st));
+}
+function xLegend(ws, r, c0){
+  const items = [[XC.pin, XC.pinInk, '직접 지정'], [XC.hol, XC.holInk, '근무 제외·휴업'], [XC.we, XC.ink, '주말·특별 근무'], [XC.fri, XC.warnInk, '금요일'], [XC.none, XC.noneInk, '가능 교사 없음']];
+  xSet(ws, r, c0, '범례', {fill: XC.head, bold: true, size: 9});
+  items.forEach(([f, k, t], i) => xSet(ws, r, c0 + 1 + i, t, {fill: f, color: k, size: 9, bold: true}));
+}
+const isClosedRow = row => !row.wk && LOCS.every(l => row.c[l] === 'X' && isLocHoliday(duty, row.date, l));
+
+/* 1) 학기 전체 목록 */
+function xsTerm(wb){
+  const ws = xSheet(wb, '학기 전체', {tab: XC.title, freeze: 4, widths: [10, 6, 16, 22, 16, 30], print: '4:4'});
+  xTitle(ws, '자기주도학습 감독 배정표 · 학기 전체', xStamp(), 6);
+  ['날짜', '요일'].forEach((h, i) => xSet(ws, 4, 1 + i, h, {fill: XC.head, bold: true}));
+  LOCS.forEach((l, i) => xSet(ws, 4, 3 + i, LOC_NAME[l], {fill: XC.loc[l][0], color: XC.white, bold: true}));
+  xSet(ws, 4, 6, '비고', {fill: XC.head, bold: true});
+  ws.getRow(4).height = 26;
+  let r = 5, ym = '', z = 0;
+  duty.schedule.forEach(row => {
+    const m = row.date.slice(0, 7);
+    if (m !== ym){
+      ym = m; z = 0; const [mc, ms] = xMonC(m);
+      const n = duty.schedule.filter(x => x.date.startsWith(m) && !x.wk && LOCS.some(l => x.c[l] !== 'X')).length;
+      xMerge(ws, r, 1, r, 6, `${ymLabel(m)}   운영 ${n}일`, {fill: ms, color: mc, bold: true, size: 11, h: 'left', indent: 1, bc: mc});
+      ws.getRow(r).height = 24; r++;
+    }
+    const base = (z++ % 2) ? XC.zebra : XC.white, fri = row.w === 5;
+    xSet(ws, r, 1, xDate(row.date), {fill: row.wk ? XC.we : fri ? XC.fri : base});
+    xSet(ws, r, 2, DOW[row.w], {fill: row.wk ? XC.we : fri ? XC.fri : base, bold: fri || row.wk, color: row.w === 6 ? XC.sat : row.w === 0 ? XC.sun : fri ? XC.warnInk : XC.ink});
+    if (isClosedRow(row)){
+      xMerge(ws, r, 3, r, 5, `휴업  ·  ${holidaysOn(duty, row.date).map(h => h.reason).join(', ')}`, {fill: XC.hol, color: XC.holInk, bold: true});
+      xSet(ws, r, 6, '', {fill: base});
+    } else {
+      LOCS.forEach((l, i) => xDutyCell(ws, r, 3 + i, row, l));
+      xSet(ws, r, 6, row.note || '', {fill: base, color: row.note && holidaysOn(duty, row.date).length ? XC.holInk : XC.sub, h: 'left', indent: 1, size: 9});
+    }
+    r++;
+  });
+  xLegend(ws, r + 1, 1);
+}
+
+/* 2) 월별 달력 (한 달 = 한 장) */
+function xsMonth(wb, ym){
+  const [mc, ms] = xMonC(ym);
+  const rows = duty.schedule.filter(x => x.date.startsWith(ym)), sm = {};
+  rows.forEach(x => sm[x.date] = x);
+  const nd = rows.some(x => x.wk) ? 7 : 5, cols = nd + 1, cw = nd === 7 ? 17 : 22;
+  const ws = xSheet(wb, `${+ym.slice(5, 7)}월`, {tab: mc, land: true, fitH: 1, widths: [11].concat(Array(nd).fill(cw))});
+  xTitle(ws, `${ymLabel(ym)} 자기주도학습 감독 배정표`, xStamp(), cols, mc);
+  const dn = ['월', '화', '수', '목', '금', '토', '일'];
+  xSet(ws, 4, 1, '장소', {fill: XC.head, bold: true});
+  for (let i = 0; i < nd; i++) xSet(ws, 4, 2 + i, dn[i], {fill: i === 4 ? XC.fri : XC.head, bold: true, color: i === 5 ? XC.sat : i === 6 ? XC.sun : i === 4 ? XC.warnInk : XC.ink});
+  ws.getRow(4).height = 24;
+  let r = 5;
+  const first = ym + '-01', last = fd(new Date(+ym.slice(0, 4), +ym.slice(5, 7), 0));
+  for (let wk = mondayOf(first); wk <= last; wk = addD(wk, 7)){
+    xSet(ws, r, 1, '날짜', {fill: ms, color: mc, bold: true, size: 9});
+    let tall = false;
+    for (let i = 0; i < nd; i++){
+      const ds = addD(wk, i), inM = ds.startsWith(ym), hol = holidaysOn(duty, ds);
+      const txt = inM ? `${+ds.slice(8)}일${hol.length ? '   ' + hol.map(h => h.reason).join(', ') : ''}` : '';
+      if (txt.length * 1.7 > cw) tall = true;
+      xSet(ws, r, 2 + i, txt, {fill: !inM ? XC.out : hol.length ? XC.hol : ms, color: hol.length ? XC.holInk : i === 5 ? XC.sat : i === 6 ? XC.sun : mc, bold: true, size: 9, h: 'left', indent: 1});
+    }
+    ws.getRow(r).height = tall ? 32 : 20;
+    LOCS.forEach((l, li) => { xSet(ws, r + 1 + li, 1, LOC_SHORT[l], {fill: XC.loc[l][0], color: XC.white, bold: true}); ws.getRow(r + 1 + li).height = 22; });
+    for (let i = 0; i < nd; i++){
+      const ds = addD(wk, i), row = sm[ds];
+      if (!ds.startsWith(ym) || !row){ LOCS.forEach((l, li) => xSet(ws, r + 1 + li, 2 + i, '', {fill: XC.out})); continue; }
+      if (isClosedRow(row)){ xMerge(ws, r + 1, 2 + i, r + 3, 2 + i, '휴업', {fill: XC.hol, color: XC.holInk, bold: true, size: 11}); continue; }
+      LOCS.forEach((l, li) => xDutyCell(ws, r + 1 + li, 2 + i, row, l, li === 2 ? {bottom: 'medium'} : null));
+    }
+    for (let c = 1; c <= cols; c++){ const cell = ws.getCell(r + 3, c); if (!cell.isMerged) cell.border = xBorder(null, 'medium'); }
+    r += 4;
+  }
+  r++;
+  xMerge(ws, r, 1, r, cols, `${+ym.slice(5, 7)}월 장소별 근무 교사 (이름 뒤 숫자 = 이 달 근무 횟수)`, {fill: XC.head, bold: true, h: 'left', indent: 1});
+  r++;
+  LOCS.forEach(l => {
+    const cnt = {};
+    rows.forEach(x => { if (isName(x.c[l])) cnt[x.c[l]] = (cnt[x.c[l]] || 0) + 1; });
+    const txt = Object.entries(cnt).sort((a, b) => a[0].localeCompare(b[0], 'ko')).map(([n, c]) => c > 1 ? `${n} ${c}` : n).join('  ·  ') || '이 달 근무 없음';
+    xSet(ws, r, 1, LOC_SHORT[l], {fill: XC.loc[l][0], color: XC.white, bold: true});
+    xMerge(ws, r, 2, r, cols, txt, {fill: XC.loc[l][1], h: 'left', indent: 1, size: 9.5});
+    ws.getRow(r).height = Math.max(22, Math.ceil(txt.length * 1.9 / (cw * nd)) * 15 + 6);
+    r++;
+  });
+  xLegend(ws, r + 1, 1);
+}
+
+/* 3) 장소별 목록 + 교사별 횟수 */
+function xsLoc(wb, l, S){
+  const [lc, ls] = XC.loc[l], L = S.locs[l];
+  const ws = xSheet(wb, LOC_SHORT[l], {tab: lc, freeze: 4, widths: [10, 6, 14, 24, 2, 11, 7, 7, 9, 40], print: '4:4'});
+  xTitle(ws, `${LOC_NAME[l]} 감독 배정표`, xStamp(), 10, lc);
+  ['날짜', '요일', '감독 교사', '비고'].forEach((h, i) => xSet(ws, 4, 1 + i, h, {fill: lc, color: XC.white, bold: true}));
+  ['교사', '평일', '금요일', '주말·특별', '근무 일자'].forEach((h, i) => xSet(ws, 4, 6 + i, h, {fill: lc, color: XC.white, bold: true}));
+  ws.getRow(4).height = 26;
+  let r = 5, ym = '';
+  duty.schedule.forEach(row => {
+    const v = row.c[l], hol = v === 'X' && !row.wk && isLocHoliday(duty, row.date, l);
+    if (v === 'X' && !hol) return;
+    const m = row.date.slice(0, 7);
+    if (m !== ym){ ym = m; const [mc, mso] = xMonC(m); xMerge(ws, r, 1, r, 4, ymLabel(m), {fill: mso, color: mc, bold: true, h: 'left', indent: 1, bc: mc}); ws.getRow(r).height = 22; r++; }
+    const fri = row.w === 5, base = row.wk ? XC.we : fri ? XC.fri : XC.white;
+    xSet(ws, r, 1, xDate(row.date), {fill: base});
+    xSet(ws, r, 2, DOW[row.w], {fill: base, bold: fri || row.wk, color: row.w === 6 ? XC.sat : row.w === 0 ? XC.sun : fri ? XC.warnInk : XC.ink});
+    xDutyCell(ws, r, 3, row, l);
+    const sp = row.sp && row.sp[l] ? duty.specials.find(s => s.date === row.date && s.loc === l) : null;
+    const note = hol ? holidaysOn(duty, row.date).map(h => h.reason).join(', ') : sp ? (sp.note || '주말·특별 근무') : (row.m && row.m[l] ? '직접 지정' : '');
+    xSet(ws, r, 4, note, {fill: XC.white, color: hol ? XC.holInk : XC.sub, h: 'left', indent: 1, size: 9});
+    r++;
+  });
+  const lastLeft = r;
+  let rr = 5;
+  const lo = Math.floor(L.avg + 1e-9), hi = Math.ceil(L.avg - 1e-9);
+  duty.teachers.filter(t => t.loc === l).sort((a, b) => (a.exclude ? 1 : 0) - (b.exclude ? 1 : 0) || a.name.localeCompare(b.name, 'ko')).forEach((t, i) => {
+    const p = S.per[S.key(l, t.name)], z = i % 2 ? XC.zebra : XC.white;
+    if (t.exclude){
+      xSet(ws, rr, 6, t.name, {fill: XC.out, color: XC.mute});
+      xMerge(ws, rr, 7, rr, 10, `근무 제외 (${t.exclude})`, {fill: XC.out, color: XC.mute, italic: true, h: 'left', indent: 1, size: 9});
+      rr++; return;
+    }
+    const off = p.wd < lo || p.wd > hi;
+    xSet(ws, rr, 6, t.name, {fill: z, bold: true});
+    xSet(ws, rr, 7, p.wd, {fill: off ? XC.warn : XC.ok, color: off ? XC.warnInk : XC.okInk, bold: true});
+    xSet(ws, rr, 8, p.fri, {fill: p.fri >= 2 ? XC.warn : z, color: p.fri >= 2 ? XC.warnInk : XC.ink});
+    xSet(ws, rr, 9, p.we || '', {fill: p.we ? XC.we : z});
+    xSet(ws, rr, 10, p.dates.map(md).join(', '), {fill: z, h: 'left', indent: 1, size: 9});
+    rr++;
+  });
+  xSet(ws, rr, 6, '평균', {fill: ls, color: lc, bold: true});
+  xSet(ws, rr, 7, +L.avg.toFixed(2), {fill: ls, color: lc, bold: true, fmt: '0.00'});
+  xMerge(ws, rr, 8, rr, 10, `배정 감독 ${L.n}명 · 운영 ${L.need}일 · 최대 편차 ${L.max - L.min}회 · 금요일 최다 ${L.friMax}회`, {fill: ls, color: lc, h: 'left', indent: 1, size: 9, bold: true});
+  xLegend(ws, Math.max(lastLeft, rr + 1) + 1, 1);
+}
+
+/* 4) 공정성: 요약 + 교사별 */
+function xsFairSummary(wb, S){
+  const ws = xSheet(wb, '검증 요약', {tab: XC.title, land: true, widths: [22, 12, 10, 11, 10, 7, 7, 9, 10, 10, 9]});
+  xTitle(ws, '자기주도학습 감독 배정 공정성 검증표', `${xStamp()}  ·  배정 ${duty.meta && duty.meta.generatedAt ? new Date(duty.meta.generatedAt).toLocaleString('ko-KR') : '-'}`, 11);
+  const H = ['장소', '운영 종료일', '운영일', '배정 감독 수', '1인당 평균', '최소', '최대', '최대 편차', '금요일 최다', '운영 금요일', '미배정일'];
+  H.forEach((h, i) => xSet(ws, 4, 1 + i, h, {fill: XC.head, bold: true}));
+  ws.getRow(4).height = 26;
+  LOCS.forEach((l, i) => {
+    const L = S.locs[l], r = 5 + i, sp = L.max - L.min;
+    ws.getRow(r).height = 24;
+    xSet(ws, r, 1, LOC_NAME[l], {fill: XC.loc[l][0], color: XC.white, bold: true});
+    xSet(ws, r, 2, duty.settings.ends[l], {fill: XC.loc[l][1]});
+    [L.need, L.n].forEach((v, k) => xSet(ws, r, 3 + k, v, {fill: XC.loc[l][1]}));
+    xSet(ws, r, 5, +L.avg.toFixed(2), {fill: XC.loc[l][1], bold: true, fmt: '0.00'});
+    xSet(ws, r, 6, L.min, {fill: XC.loc[l][1]}); xSet(ws, r, 7, L.max, {fill: XC.loc[l][1]});
+    xSet(ws, r, 8, sp, {fill: sp <= 1 ? XC.ok : sp <= 2 ? XC.warn : XC.bad, color: sp <= 1 ? XC.okInk : sp <= 2 ? XC.warnInk : XC.badInk, bold: true});
+    const fOk = L.friMax <= 1, fAvoid = L.friNeed > L.n;
+    xSet(ws, r, 9, L.friMax, {fill: fOk ? XC.ok : fAvoid ? XC.warn : XC.bad, color: fOk ? XC.okInk : fAvoid ? XC.warnInk : XC.badInk, bold: true});
+    xSet(ws, r, 10, `${L.friNeed}일`, {fill: XC.loc[l][1]});
+    xSet(ws, r, 11, L.none ? `${L.none}일` : '없음', {fill: L.none ? XC.bad : XC.ok, color: L.none ? XC.badInk : XC.okInk, bold: true});
+  });
+  let r = 9;
+  xMerge(ws, r, 1, r, 11, '배정 원칙', {fill: XC.title, color: XC.white, bold: true, h: 'left', indent: 1}); ws.getRow(r).height = 22; r++;
+  RULES.forEach((t, i) => {
+    xSet(ws, r, 1, i + 1, {fill: XC.head, bold: true});
+    xMerge(ws, r, 2, r, 11, t, {h: 'left', indent: 1, size: 9.5});
+    ws.getRow(r).height = t.length > 75 ? 34 : 20; r++;
+  });
+  r++;
+  xMerge(ws, r, 1, r, 11, '최대 편차 = 같은 장소에서 가장 많이 한 교사와 가장 적게 한 교사의 평일 횟수 차이. 1회 이하면 운영일을 인원으로 나눌 때 생기는 나머지 수준입니다.', {color: XC.sub, size: 9, h: 'left', indent: 1, noBorder: true});
+}
+function xsFairTeachers(wb, S){
+  const ws = xSheet(wb, '교사별 검증', {tab: 'FF56635B', land: true, freeze: 4, print: '4:4', widths: [10, 7, 8, 7, 9, 8, 22, 34, 52]});
+  xTitle(ws, '교사별 근무 횟수와 판정', xStamp(), 9);
+  ['이름', '평일', '장소 평균', '금요일', '주말·특별', '직접 지정', '설정된 조건', '판정', '근무 일자 (평일·특별 포함)'].forEach((h, i) => xSet(ws, 4, 1 + i, h, {fill: XC.head, bold: true}));
+  ws.getRow(4).height = 26;
+  let r = 5;
+  const vc = {'t-ok': [XC.ok, XC.okInk], 't-warn': [XC.warn, XC.warnInk], 't-bad': [XC.bad, XC.badInk], 't-mute': [XC.out, XC.mute]};
+  LOCS.forEach(l => {
+    const L = S.locs[l];
+    xMerge(ws, r, 1, r, 9, `${LOC_NAME[l]}   배정 감독 ${L.n}명 · 1인당 평균 ${L.avg.toFixed(2)}회 · 최소 ${L.min} ~ 최대 ${L.max}회`, {fill: XC.loc[l][0], color: XC.white, bold: true, h: 'left', indent: 1});
+    ws.getRow(r).height = 22; r++;
+    duty.teachers.filter(t => t.loc === l).sort((a, b) => (a.exclude ? 1 : 0) - (b.exclude ? 1 : 0) || a.name.localeCompare(b.name, 'ko')).forEach((t, i) => {
+      const p = S.per[S.key(l, t.name)], v = verdict(t, p, L), z = i % 2 ? XC.loc[l][1] : XC.white, [vf, vk] = vc[v.cls] || vc['t-mute'];
+      const cons = [t.offDays.length ? `불가 요일 ${t.offDays.join('·')}` : '', t.leaveStart && t.leaveEnd ? `불가 기간 ${md(t.leaveStart)}~${md(t.leaveEnd)}` : '', t.prevEnd ? '지난 학기 말 근무' : ''].filter(Boolean).join(', ');
+      xSet(ws, r, 1, t.name, {fill: z, bold: !t.exclude, color: t.exclude ? XC.mute : XC.ink});
+      xSet(ws, r, 2, t.exclude ? '–' : p.wd, {fill: z, bold: true});
+      xSet(ws, r, 3, +L.avg.toFixed(2), {fill: z, color: XC.sub, fmt: '0.00'});
+      xSet(ws, r, 4, t.exclude ? '–' : p.fri, {fill: p.fri >= 2 ? XC.warn : z, color: p.fri >= 2 ? XC.warnInk : XC.ink});
+      xSet(ws, r, 5, p.we || '', {fill: p.we ? XC.we : z});
+      xSet(ws, r, 6, p.manual || '', {fill: p.manual ? XC.pin : z, color: XC.pinInk});
+      xSet(ws, r, 7, cons || '없음', {fill: z, color: cons ? XC.ink : XC.mute, h: 'left', indent: 1, size: 9});
+      xSet(ws, r, 8, v.text + (v.why ? `\n${v.why}` : ''), {fill: vf, color: vk, bold: true, h: 'left', indent: 1, size: 9});
+      xSet(ws, r, 9, p.dates.map(md).join(', '), {fill: z, h: 'left', indent: 1, size: 9});
+      if (v.why) ws.getRow(r).height = 30;
+      r++;
+    });
+  });
+}
+
+async function xlsSchedule(){
+  const wb = xBook(), S = computeStats(duty);
+  xsTerm(wb);
+  [...new Set(duty.schedule.map(x => x.date.slice(0, 7)))].forEach(ym => xsMonth(wb, ym));
+  LOCS.forEach(l => xsLoc(wb, l, S));
+  xsFairTeachers(wb, S);
+  await xSave(wb, '자기주도학습_감독배정표.xlsx');
+}
+async function xlsFairness(){
+  const wb = xBook(), S = computeStats(duty);
+  xsFairSummary(wb, S); xsFairTeachers(wb, S);
+  await xSave(wb, '자기주도학습_공정성검증표.xlsx');
+}
+
+/* 5) 참여 현황: 공용 표 (날짜·감독·학년별 신청/참여·합계) */
+const XS_W = [10, 5, 10, 10, 10, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 22];
+function xsStudyHead(ws, r){
+  const g = (c1, c2, t, col) => xMerge(ws, r, c1, r, c2, t, {fill: col, color: XC.white, bold: true});
+  xMerge(ws, r, 1, r + 1, 1, '날짜', {fill: XC.head, bold: true});
+  xMerge(ws, r, 2, r + 1, 2, '요일', {fill: XC.head, bold: true});
+  xMerge(ws, r, 3, r, 5, '감독 교사', {fill: XC.head, bold: true});
+  g(6, 7, '1학년', XC.gr.g1[0]); g(8, 9, '2학년', XC.gr.g2[0]); g(10, 11, '3학년 남', XC.gr.g3[0]); g(12, 13, '3학년 여', XC.gr.g3[0]); g(14, 15, '3학년 계', XC.gr.g3[0]); g(16, 18, '합계', XC.gr.all[0]);
+  xMerge(ws, r, 19, r + 1, 19, '특이사항', {fill: XC.head, bold: true});
+  LOCS.forEach((l, i) => xSet(ws, r + 1, 3 + i, LOC_SHORT[l], {fill: XC.loc[l][0], color: XC.white, bold: true, size: 9}));
+  ['g1', 'g2', 'g3', 'g3', 'g3'].forEach((k, i) => { xSet(ws, r + 1, 6 + i * 2, '신청', {fill: XC.gr[k][1], color: XC.gr[k][0], bold: true, size: 9}); xSet(ws, r + 1, 7 + i * 2, '참여', {fill: XC.gr[k][1], color: XC.gr[k][0], bold: true, size: 9}); });
+  ['신청', '참여', '참여율'].forEach((h, i) => xSet(ws, r + 1, 16 + i, h, {fill: XC.gr.all[1], color: XC.gr.all[0], bold: true, size: 9}));
+  ws.getRow(r).height = 22; ws.getRow(r + 1).height = 20;
+}
+const xAcc = () => ({a1:0, t1:0, a2:0, t2:0, ma:0, mt:0, fa:0, ft:0, a3:0, t3:0, A:0, T:0, days:0, mf:false});
+function xsStudyRow(ws, r, ds, sm, acc, z){
+  const rec = study[ds], t = recTotals(rec), row = sm[ds], g3 = (rec && rec.g3) || {}, w = dowOf(ds), fri = w === 5;
+  xSet(ws, r, 1, xDate(ds), {fill: fri ? XC.fri : z});
+  xSet(ws, r, 2, DOW[w], {fill: fri ? XC.fri : z, bold: fri, color: w === 6 ? XC.sat : w === 0 ? XC.sun : fri ? XC.warnInk : XC.ink});
+  LOCS.forEach((l, i) => {
+    const v = row ? row.c[l] : 'X';
+    const named = isName(v);
+    xSet(ws, r, 3 + i, named ? v : (v === 'X' && isLocHoliday(duty, ds, l)) ? '제외' : '–', {fill: named ? XC.loc[l][1] : z, color: named ? XC.ink : XC.mute, size: 9});
+  });
+  if (!t){
+    const reason = (rec && rec.reason) || holidaysOn(duty, ds).filter(h => h.locs.includes('ALL')).map(h => h.reason).join(', ');
+    xMerge(ws, r, 6, r, 18, reason || (ds <= todayStr ? '기록 없음' : ''), {fill: reason ? XC.hol : z, color: reason ? XC.holInk : XC.mute, bold: !!reason, italic: !reason, size: 9});
+    xSet(ws, r, 19, '', {fill: z});
+    return;
+  }
+  const hasMF = g3.m_apply !== undefined && g3.m_apply !== null;
+  const mf = hasMF ? [+g3.m_apply || 0, +g3.m_attend || 0, +g3.f_apply || 0, +g3.f_attend || 0] : ['', '', '', ''];
+  const pairs = [[t.a1, t.t1, 'g1'], [t.a2, t.t2, 'g2'], [mf[0], mf[1], 'g3'], [mf[2], mf[3], 'g3'], [t.a3, t.t3, 'g3']];
+  pairs.forEach(([a, b, k], i) => {
+    xSet(ws, r, 6 + i * 2, a, {fill: z});
+    const over = a !== '' && b > a;
+    xSet(ws, r, 7 + i * 2, b, {fill: over ? XC.bad : XC.gr[k][1], color: over ? XC.badInk : XC.gr[k][0], bold: true});
+  });
+  xSet(ws, r, 16, t.A, {fill: z, bold: true});
+  xSet(ws, r, 17, t.T, {fill: XC.gr.all[1], color: XC.gr.all[0], bold: true});
+  xSet(ws, r, 18, t.A ? t.T / t.A : '–', {fill: z, fmt: '0.0%'});
+  xSet(ws, r, 19, rec.reason || '', {fill: z, h: 'left', indent: 1, size: 9});
+  [acc].flat().forEach(a => {
+    a.a1 += t.a1; a.t1 += t.t1; a.a2 += t.a2; a.t2 += t.t2; a.a3 += t.a3; a.t3 += t.t3; a.A += t.A; a.T += t.T; a.days++;
+    if (hasMF){ a.mf = true; a.ma += mf[0]; a.mt += mf[1]; a.fa += mf[2]; a.ft += mf[3]; }
+  });
+}
+function xsStudySum(ws, r, label, a, strong){
+  const f = strong ? XC.gr.all[1] : XC.head, k = strong ? XC.gr.all[0] : XC.ink;
+  xMerge(ws, r, 1, r, 5, `${label}   (기록 ${a.days}일)`, {fill: f, color: k, bold: true, h: 'left', indent: 1});
+  [a.a1, a.t1, a.a2, a.t2, a.mf ? a.ma : '', a.mf ? a.mt : '', a.mf ? a.fa : '', a.mf ? a.ft : '', a.a3, a.t3, a.A, a.T].forEach((v, i) => xSet(ws, r, 6 + i, v, {fill: f, color: k, bold: true}));
+  xSet(ws, r, 18, a.A ? a.T / a.A : '–', {fill: f, color: k, bold: true, fmt: '0.0%'});
+  xSet(ws, r, 19, a.days ? `일평균 참여 ${(a.T / a.days).toFixed(1)}명` : '', {fill: f, color: k, size: 9, h: 'left', indent: 1});
+  ws.getRow(r).height = 22;
+}
+function xsGradeTable(ws, r, a, title){
+  xMerge(ws, r, 1, r, 10, title, {fill: XC.title, color: XC.white, bold: true, h: 'left', indent: 1}); ws.getRow(r).height = 22; r++;
+  [['학년', 1, 2], ['신청(연인원)', 3, 4], ['참여(연인원)', 5, 6], ['참여율', 7, 8], ['일평균 참여', 9, 10]].forEach(([h, c1, c2]) => xMerge(ws, r, c1, r, c2, h, {fill: XC.head, bold: true}));
+  r++;
+  const rows = [['1학년', a.a1, a.t1, 'g1'], ['2학년', a.a2, a.t2, 'g2']];
+  if (a.mf) rows.push(['3학년 남', a.ma, a.mt, 'g3'], ['3학년 여', a.fa, a.ft, 'g3']);
+  rows.push(['3학년 계', a.a3, a.t3, 'g3'], ['전체', a.A, a.T, 'all']);
+  rows.forEach(([g, ap, at, k]) => {
+    const st = {fill: XC.gr[k][1], color: XC.gr[k][0], bold: g === '전체'};
+    xMerge(ws, r, 1, r, 2, g, {fill: XC.gr[k][0], color: XC.white, bold: true});
+    xMerge(ws, r, 3, r, 4, ap, st); xMerge(ws, r, 5, r, 6, at, Object.assign({}, st, {bold: true}));
+    xMerge(ws, r, 7, r, 8, ap ? at / ap : '–', Object.assign({fmt: '0.0%'}, st));
+    xMerge(ws, r, 9, r, 10, a.days ? +(at / a.days).toFixed(1) : '–', Object.assign({fmt: '0.0'}, st));
+    ws.getRow(r).height = 20; r++;
+  });
+  return r;
+}
+function xStudyDays(s, e){
+  const set = new Set();
+  for (let d = s; d <= e; d = addD(d, 1)){ const w = dowOf(d); if (w > 0 && w < 6) set.add(d); }
+  Object.keys(study).forEach(d => { if (d >= s && d <= e) set.add(d); });
+  return [...set].sort();
+}
+async function xlsStudy(s, e){
+  const wb = xBook(), sm = schedMap(), days = xStudyDays(s, e), months = [...new Set(days.map(d => d.slice(0, 7)))];
+  const sumWs = xSheet(wb, '월별 요약', {tab: XC.title, land: true, widths: [12, 8, 7, 7, 8, 7, 7, 8, 7, 7, 8, 8, 8, 8, 10]});
+  xTitle(sumWs, '자기주도학습 참여 현황 · 월별 요약', `조회 기간 ${s} ~ ${e}  ·  ${new Date().toLocaleDateString('ko-KR')} 내보냄`, 15);
+  const term = xAcc(), monthAcc = {};
+  months.forEach(ym => {
+    const [mc] = xMonC(ym), a = monthAcc[ym] = xAcc();
+    const ws = xSheet(wb, `${+ym.slice(5, 7)}월`, {tab: mc, land: true, freeze: 5, print: '4:5', widths: XS_W});
+    xTitle(ws, `${ymLabel(ym)} 자기주도학습 참여 현황`, `조회 기간 ${s} ~ ${e}  ·  참여 칸이 빨간색이면 참여 인원이 신청 인원보다 많은 날입니다.`, 19, mc);
+    xsStudyHead(ws, 4);
+    let r = 6, wk = null, wa = xAcc(), z = 0;
+    const flushWeek = () => { if (wk && wa.days){ xsStudySum(ws, r, `${weekLabel(wk)} 합계`, wa, false); r++; } wa = xAcc(); };
+    days.filter(d => d.startsWith(ym)).forEach(ds => {
+      const mon = mondayOf(ds);
+      if (wk && mon !== wk) flushWeek();
+      wk = mon;
+      xsStudyRow(ws, r, ds, sm, [a, wa, term], (z++ % 2) ? XC.zebra : XC.white); r++;
+    });
+    flushWeek();
+    xsStudySum(ws, r, `${+ym.slice(5, 7)}월 합계`, a, true); r += 2;
+    if (r > 30){ const br = ws.getRow(r - 1); if (br.addPageBreak) br.addPageBreak(); }
+    xsGradeTable(ws, r, a, `${+ym.slice(5, 7)}월 학년별 합계`);
+  });
+  // 요약 시트
+  const g = (c1, c2, t, col) => xMerge(sumWs, 4, c1, 4, c2, t, {fill: col, color: XC.white, bold: true});
+  xMerge(sumWs, 4, 1, 5, 1, '월', {fill: XC.head, bold: true}); xMerge(sumWs, 4, 2, 5, 2, '기록일', {fill: XC.head, bold: true});
+  g(3, 5, '1학년', XC.gr.g1[0]); g(6, 8, '2학년', XC.gr.g2[0]); g(9, 11, '3학년', XC.gr.g3[0]); g(12, 15, '전체', XC.gr.all[0]);
+  [['g1', 3], ['g2', 6], ['g3', 9]].forEach(([k, c]) => ['신청', '참여', '참여율'].forEach((h, i) => xSet(sumWs, 5, c + i, h, {fill: XC.gr[k][1], color: XC.gr[k][0], bold: true, size: 9})));
+  ['신청', '참여', '참여율', '일평균 참여'].forEach((h, i) => xSet(sumWs, 5, 12 + i, h, {fill: XC.gr.all[1], color: XC.gr.all[0], bold: true, size: 9}));
+  sumWs.getRow(4).height = 22; sumWs.getRow(5).height = 20;
+  const line = (r, label, a, f, k, lf) => {
+    xSet(sumWs, r, 1, label, {fill: lf || f, color: lf ? XC.white : k, bold: true});
+    xSet(sumWs, r, 2, a.days, {fill: f, color: k});
+    [[a.a1, a.t1, 3], [a.a2, a.t2, 6], [a.a3, a.t3, 9], [a.A, a.T, 12]].forEach(([ap, at, c]) => {
+      xSet(sumWs, r, c, ap, {fill: f, color: k}); xSet(sumWs, r, c + 1, at, {fill: f, color: k, bold: true}); xSet(sumWs, r, c + 2, ap ? at / ap : '–', {fill: f, color: k, fmt: '0.0%'});
+    });
+    xSet(sumWs, r, 15, a.days ? +(a.T / a.days).toFixed(1) : '–', {fill: f, color: k, fmt: '0.0'});
+    sumWs.getRow(r).height = 22;
+  };
+  let r = 6;
+  months.forEach(ym => { const [mc, ms] = xMonC(ym); line(r++, `${ymLabel(ym)}`, monthAcc[ym], ms, XC.ink, mc); });
+  line(r, '기간 합계', term, XC.gr.all[1], XC.gr.all[0]); r += 2;
+  xsGradeTable(sumWs, r, term, '조회 기간 학년별 합계');
+  await xSave(wb, `자기주도학습현황_${s}_${e}.xlsx`);
+}
+async function xlsWeek(mon){
+  const wb = xBook(), sm = schedMap(), end = addD(mon, 4), a = xAcc();
+  const ws = xSheet(wb, '주간보고', {tab: XC.title, land: true, fitH: 1, widths: XS_W});
+  xTitle(ws, `자기주도학습 주간 보고 · ${weekLabel(mon)} (${md(mon)} ~ ${md(end)})`, `${xStamp()}`, 19);
+  xsStudyHead(ws, 4);
+  let r = 6;
+  for (let i = 0; i < 5; i++){ xsStudyRow(ws, r, addD(mon, i), sm, a, i % 2 ? XC.zebra : XC.white); r++; }
+  xsStudySum(ws, r, '주간 합계', a, true); r += 2;
+  // 감독 현황 (장소 × 요일)
+  const D = weekReportData(mon), spans = [[3, 5], [6, 8], [9, 11], [12, 14], [15, 17]];
+  xMerge(ws, r, 1, r, 17, '감독 현황', {fill: XC.title, color: XC.white, bold: true, h: 'left', indent: 1}); ws.getRow(r).height = 22; r++;
+  xMerge(ws, r, 1, r, 2, '장소', {fill: XC.head, bold: true});
+  D.days.forEach((d, i) => xMerge(ws, r, spans[i][0], r, spans[i][1], `${DOW[i + 1]} (${md(d.ds)})`, {fill: i === 4 ? XC.fri : XC.head, bold: true, color: i === 4 ? XC.warnInk : XC.ink}));
+  r++;
+  LOCS.forEach(l => {
+    xMerge(ws, r, 1, r, 2, LOC_SHORT[l], {fill: XC.loc[l][0], color: XC.white, bold: true});
+    D.days.forEach((d, i) => { const v = d.duty[l], named = !['근무 제외', '–', '가능 교사 없음'].includes(v);
+      xMerge(ws, r, spans[i][0], r, spans[i][1], v, {fill: named ? XC.loc[l][1] : v === '근무 제외' ? XC.hol : XC.out, color: named ? XC.ink : v === '근무 제외' ? XC.holInk : XC.mute, bold: named}); });
+    ws.getRow(r).height = 22; r++;
+  });
+  r++;
+  xsGradeTable(ws, r, a, `학년별 주간 합계 (기록 ${a.days}일)`);
+  await xSave(wb, `자기주도학습_주간보고_${mon}.xlsx`);
+}
+
 function renderFairness(){
   const S = computeStats(duty);
   const f = ui.fairLoc;
